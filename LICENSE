@@ -2,10 +2,6 @@ MIT License
 
 Copyright (c) 2026 GoRmiTz
 
-本项目基于 MeteorNOX/DeepSeek-Balance-Whale-Widget（MIT License）二次开发。
-上游项目的许可证原文保留在 vendor/dsh-whale-widget/LICENSE，其版权归原作者所有。
-以下条款适用于本仓库中由本项目新增或修改的部分。
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
