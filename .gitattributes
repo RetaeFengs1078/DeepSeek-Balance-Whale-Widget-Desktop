@@ -1,0 +1,13 @@
+# 统一换行符：仓库里存 LF，检出时按系统转换
+* text=auto
+
+# Windows 脚本必须 CRLF，否则 .bat 会执行异常
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制文件禁止做任何转换
+*.png binary
+*.gif binary
+*.mp3 binary
+*.ico binary

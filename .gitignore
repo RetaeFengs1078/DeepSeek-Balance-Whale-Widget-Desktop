@@ -1,0 +1,22 @@
+# —— 敏感信息：绝对不能提交 ——
+config.json
+*.local.json
+.env
+
+# —— 运行时数据（余额账本、个人设置）——
+data/
+sounds/
+chrome-profile/
+*.log
+
+# —— 依赖与打包产物（体积巨大，可重建）——
+node_modules/
+dist/
+
+# —— 系统 / 编辑器垃圾 ——
+.DS_Store
+Thumbs.db
+Desktop.ini
+NVIDIA Corporation/
+.vscode/
+.idea/

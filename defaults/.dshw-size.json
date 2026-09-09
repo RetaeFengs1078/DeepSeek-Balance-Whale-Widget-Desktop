@@ -1,0 +1,13 @@
+{
+  "scale": 0.6,
+  "sound": true,
+  "vol": 0.6,
+  "soundSet": "duck",
+  "usageMode": "ledger",
+  "peakMode": "default",
+  "bubbleOn": true,
+  "turnCostOn": false,
+  "turnCostCloseMs": 5000,
+  "scrollGapOn": false,
+  "scrollGapPx": 17
+}

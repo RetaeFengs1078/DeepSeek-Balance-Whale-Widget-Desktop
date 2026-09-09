@@ -1,0 +1,338 @@
+<!--
+  DeepSeek-Balance-Whale-Widget-Desktop
+  Copyright (c) 2026 GoRmiTz
+
+  SPDX-License-Identifier: MIT
+  本文件为本项目自有代码，协议全文见仓库根目录 LICENSE。
+-->
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="sKmvFUloxGsvbn8iDjpykl">
+<head data-page-node-id="2DIWtnxV7mScPlzXx3zqOC">
+<meta charset="utf-8" data-page-node-id="viWrbqA9XdA1EcaKxgD3gQ">
+<title>鲸鱼余额</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'">
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #0e121c; color: #8b96b0;
+    font-family: "Microsoft YaHei", system-ui, sans-serif;
+  }
+  .hint { position: fixed; left: 18px; top: 16px; font-size: 12px; line-height: 1.9; user-select: none; }
+  .hint b { color: #c3cde4; font-weight: 500; }
+  .err {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: none; max-width: 300px; text-align: center; font-size: 13px; line-height: 1.8;
+    color: #f0a8a8; padding: 16px 18px; border: 1px solid rgba(240, 168, 168, .3);
+    border-radius: 10px; background: rgba(240, 168, 168, .06);
+  }
+
+  /* ---- 桌面透明窗口模式：整屏透明，只留下小鲸鱼 ---- */
+  html.desktop, html.desktop body { background: transparent; }
+  html.desktop .hint { display: none; }
+  html.desktop .err {
+    left: 14px; top: auto; bottom: 14px; transform: none;
+    max-width: 220px; font-size: 12px; text-align: left;
+    border-radius: 8px; background: rgba(20, 24, 36, .82);
+  }
+  /* 鲸鱼本体要能被鼠标命中（挂件默认是 pointer-events:none） */
+  html.desktop .dshwv-img { pointer-events: auto; }
+</style>
+</head>
+<body data-page-node-id="CLmd4e5pwlCijQBp3glBQg">
+  <div class="hint" data-page-node-id="tKUoroHLEdgricsMA0J1yR">
+    <b data-page-node-id="6DBhcXlDQHs8YfE13W04Of">DeepSeek 余额</b><br data-page-node-id="9flLEE0lAu43cJwlEcjzmU">
+    余额每 60 秒自动刷新<br data-page-node-id="Y3bWvCPsNP9OhceSEP25Zl">
+    点鲸鱼：手动刷新 / 随机台词<br data-page-node-id="pkOJz3m5RpRq5T7xuDAjGB">
+    悬停右上角：菜单（大小·音效·用量）
+  </div>
+  <div class="err" id="err" data-page-node-id="V5ZKJfi3OCAJEdhVrs65pS">
+    还没有读到 API Key。<br data-page-node-id="EAMSpJyFxhUkHc9FYgQOdO">
+    打开本目录下的 <b data-page-node-id="rJECQEW8PuAA04ReKgRAhV">config.json</b>，把 <b data-page-node-id="fVNta2cMBn5JGMFBykBXeC">DEEPSEEK_API_KEY</b> 填进去，然后重启。
+  </div>
+  <script>
+    // preload 注入的标记：Electron 桌面窗口里为真
+    var DESKTOP = !!(window.__whale && window.__whale.desktop)
+    if (DESKTOP) document.documentElement.classList.add('desktop')
+
+    // 自定义音效：挂件只会去请求 ?set=duck / ?set=fx1，
+    // 这里把 window.Audio 包一层，选中自定义音效包时把 URL 改写成 c:<包名>。
+    // 必须在挂件脚本（defer）之前执行。
+    if (DESKTOP) {
+      window.__whaleCustomSound = ''
+      var _Audio = window.Audio
+      window.Audio = function (src) {
+        try {
+          if (window.__whaleCustomSound && typeof src === 'string' && src.indexOf('/dsh-whale/sound/') !== -1) {
+            src = src.replace(/([?&]set=)[^&]*/, '$1' + encodeURIComponent('c:' + window.__whaleCustomSound))
+          }
+        } catch (err) {}
+        return new _Audio(src)
+      }
+      window.Audio.prototype = _Audio.prototype
+    }
+  </script>
+  <script>
+    // 桌面模式下砍掉「每轮对话消耗」的 1 秒轮询：该功能依赖 DSH 会话事件，这里没有数据源，
+    // 但挂件本体会无条件每秒请求一次。这里把该请求就地短路，省掉每秒一次的唤醒。
+    if (DESKTOP && window.Response) {
+      var _fetch = window.fetch
+      window.fetch = function (input) {
+        var u = typeof input === 'string' ? input : (input && input.url)
+        if (u && String(u).indexOf('/dsh-whale/last-turn.json') !== -1) {
+          return Promise.resolve(new Response(
+            JSON.stringify({ ok: true, seq: 0, turn: null, amount: null, tokens: null, ts: null }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          ))
+        }
+        return _fetch.apply(window, arguments)
+      }
+    }
+  </script>
+  <script>
+    fetch('/dsh-whale/balance.json', { cache: 'no-store' })
+      .then(function (r) { return r.json() })
+      .then(function (d) { if (d && d.code === 'NO_KEY') document.getElementById('err').style.display = 'block' })
+      .catch(function () {})
+  </script>
+  <script>
+    // 桌面模式：把鲸鱼的位置告诉主进程，由主进程判断光标是否命中（透明区鼠标穿透）。
+    // 只在位置真的变了才上报，静止时零开销。
+    if (DESKTOP && window.__whale.reportState) {
+      var lastKey = ''
+      setInterval(function () {
+        var root = document.querySelector('.dshwv-root')
+        if (!root) return
+        var img = document.querySelector('.dshwv-img')
+        var bubbleOpen = !!document.querySelector('.dshwv-bubble.dshwv-bubble-open')
+        var menuOpen = !!document.querySelector('.dshwv-menu.dshwv-menu-open')
+        var dragging = root.classList.contains('dshwv-dragging')
+        // 气泡展开时命中区要覆盖整个挂件（气泡在鲸鱼上方），否则只需要鲸鱼本体
+        var r = (bubbleOpen ? root : (img || root)).getBoundingClientRect()
+        var rect = { x: r.left, y: r.top, w: r.width, h: r.height }
+        var force = dragging || menuOpen
+        var key = [Math.round(rect.x), Math.round(rect.y), Math.round(rect.w), force ? 1 : 0].join(',')
+        if (key === lastKey) return
+        lastKey = key
+        window.__whale.reportState(rect, force)
+      }, 300)
+    }
+  </script>
+  <script>
+    // 往挂件自带的汉堡菜单里追加两项：API Key 填写 + 窗口置顶开关。
+    // 不改动插件源码，等菜单 DOM 出现后注入；插件升级也不受影响。
+    if (DESKTOP) {
+      (function () {
+        var menuEl = null
+        var tries = 0
+        var timer = setInterval(function () {
+          menuEl = document.querySelector('.dshwv-menu')
+          if (menuEl || ++tries > 100) { clearInterval(timer); if (menuEl) inject(menuEl) }
+        }, 300)
+
+        function extRow() {
+          var r = document.createElement('div')
+          r.className = 'dshwv-menu-row whale-ext'
+          return r
+        }
+
+        function inject(menu) {
+          if (menu.querySelector('.whale-ext')) return
+          console.log('[whale] 菜单已扩展：API Key + 窗口置顶')
+
+          var sep = document.createElement('div')
+          sep.className = 'dshwv-menu-sep whale-ext'
+          menu.appendChild(sep)
+
+          // —— API Key ——
+          var row1 = extRow()
+          var label = document.createElement('span')
+          label.textContent = 'API Key'
+          var input = document.createElement('input')
+          input.type = 'password'
+          input.className = 'dshwv-number'
+          input.placeholder = '未设置'
+          input.style.cssText = 'flex:1;width:100px'
+          var saveBtn = document.createElement('button')
+          saveBtn.type = 'button'
+          saveBtn.textContent = '保存'
+          saveBtn.className = 'dshwv-sound'
+          saveBtn.style.cssText = 'flex:0 0 auto;width:auto;padding:3px 9px'
+          row1.appendChild(label)
+          row1.appendChild(input)
+          row1.appendChild(saveBtn)
+          menu.appendChild(row1)
+
+          var tip = document.createElement('span')
+          tip.style.cssText = 'font-size:11px;color:#6b7ba6'
+          var row2 = extRow()
+          row2.appendChild(tip)
+          menu.appendChild(row2)
+
+          // —— 自定义音效包 ——
+          var rowS = extRow()
+          var sLabel = document.createElement('span')
+          sLabel.textContent = '音效包'
+          var soundSel = document.createElement('select')
+          soundSel.className = 'dshwv-sound'
+          soundSel.style.cssText = 'flex:1;min-width:0'
+          rowS.appendChild(sLabel)
+          rowS.appendChild(soundSel)
+          menu.appendChild(rowS)
+
+          var rowS2 = extRow()
+          var sTip = document.createElement('span')
+          sTip.style.cssText = 'font-size:11px;color:#6b7ba6'
+          var refreshBtn = document.createElement('button')
+          refreshBtn.type = 'button'
+          refreshBtn.textContent = '刷新'
+          refreshBtn.className = 'dshwv-sound'
+          refreshBtn.style.cssText = 'flex:0 0 auto;width:auto;padding:3px 9px'
+          var openBtn = document.createElement('button')
+          openBtn.type = 'button'
+          openBtn.textContent = '文件夹'
+          openBtn.className = 'dshwv-sound'
+          openBtn.style.cssText = 'flex:0 0 auto;width:auto;padding:3px 9px'
+          rowS2.appendChild(sTip)
+          rowS2.appendChild(refreshBtn)
+          rowS2.appendChild(openBtn)
+          menu.appendChild(rowS2)
+
+          function opt(value, text) {
+            var o = document.createElement('option')
+            o.value = value
+            o.textContent = text
+            return o
+          }
+
+          function findPresetSelect() {
+            var sels = menu.querySelectorAll('select')
+            for (var i = 0; i < sels.length; i++) {
+              if (sels[i] !== soundSel && sels[i].querySelector('option[value="duck"]')) return sels[i]
+            }
+            return null
+          }
+
+          function loadSounds(keep) {
+            return fetch('/dsh-whale/sounds', { cache: 'no-store' })
+              .then(function (r) { return r.json() })
+              .then(function (d) {
+                var items = (d && d.items) || []
+                soundSel.innerHTML = ''
+                soundSel.appendChild(opt('', '内置（小黄鸭/音效1）'))
+                for (var i = 0; i < items.length; i++) {
+                  var it = items[i]
+                  var tag = it.hasPress && it.hasRelease ? '按+松' : '单音'
+                  soundSel.appendChild(opt(it.id, it.name + '（' + tag + '）'))
+                }
+                if (keep) soundSel.value = keep
+                if (!soundSel.value && keep) soundSel.value = ''
+                sTip.textContent = items.length ? ('扫描到 ' + items.length + ' 套') : 'sounds 文件夹为空'
+                return items
+              })
+              .catch(function () {
+                sTip.textContent = '音效扫描失败'
+                return []
+              })
+          }
+
+          // 让挂件重建 Audio 对象：触发它自己的音效下拉的 change
+          function rebuildAudio() {
+            var preset = findPresetSelect()
+            if (preset) preset.dispatchEvent(new Event('change'))
+          }
+
+          soundSel.addEventListener('change', function () {
+            window.__whaleCustomSound = soundSel.value
+            if (window.__whale.patchSettings) {
+              window.__whale.patchSettings({ soundSet: soundSel.value }).catch(function () {})
+            }
+            rebuildAudio()
+            sTip.textContent = soundSel.value ? '已切换到：' + soundSel.value : '已用内置音效'
+          })
+
+          refreshBtn.addEventListener('click', function () {
+            sTip.textContent = '扫描中…'
+            loadSounds(window.__whaleCustomSound).then(function () { rebuildAudio() })
+          })
+
+          openBtn.addEventListener('click', function () {
+            if (window.__whale.openSounds) window.__whale.openSounds()
+          })
+
+          // —— 窗口置顶 ——
+          var row3 = extRow()
+          var chk = document.createElement('input')
+          chk.type = 'checkbox'
+          chk.className = 'dshwv-check'
+          chk.checked = true
+          var chkLabel = document.createElement('span')
+          chkLabel.textContent = '窗口置顶'
+          row3.appendChild(chk)
+          row3.appendChild(chkLabel)
+          menu.appendChild(row3)
+
+          fetch('/dsh-whale/config', { cache: 'no-store' })
+            .then(function (r) { return r.json() })
+            .then(function (d) {
+              if (d && d.hasKey) {
+                input.placeholder = '已配置 ••••' + (d.tail || '')
+                tip.textContent = '已保存，可填新的覆盖'
+              }
+            })
+            .catch(function () {})
+
+          if (window.__whale.getSettings) {
+            window.__whale.getSettings()
+              .then(function (s) {
+                chk.checked = !(s && s.alwaysOnTop === false)
+                window.__whaleCustomSound = (s && s.soundSet) || ''
+                return loadSounds(window.__whaleCustomSound)
+              })
+              .then(function () { if (window.__whaleCustomSound) rebuildAudio() })
+              .catch(function () { loadSounds('') })
+          } else {
+            loadSounds('')
+          }
+
+          chk.addEventListener('change', function () {
+            if (!window.__whale.patchSettings) return
+            window.__whale.patchSettings({ alwaysOnTop: chk.checked })
+              .then(function (s) { chk.checked = !!(s && s.alwaysOnTop) })
+              .catch(function () {})
+          })
+
+          // 用捕获阶段监听：挂件自己也在 document 上拦 click，冒泡阶段可能收不到
+          document.addEventListener('click', function (e) {
+            if (!e.target || !e.target.closest || !e.target.closest('.whale-ext')) return
+            e.stopPropagation()
+            if (e.target !== saveBtn) return
+            var v = input.value.trim()
+            if (!v) { tip.textContent = '请先填入 Key'; return }
+            saveBtn.disabled = true
+            tip.textContent = '保存中…'
+            fetch('/dsh-whale/config', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ DEEPSEEK_API_KEY: v }),
+            })
+              .then(function (r) { return r.json() })
+              .then(function (d) {
+                if (d && d.ok) {
+                  tip.textContent = '已保存，正在刷新…'
+                  setTimeout(function () { location.reload() }, 600)
+                } else {
+                  tip.textContent = '保存失败：' + ((d && d.error) || '未知')
+                  saveBtn.disabled = false
+                }
+              })
+              .catch(function () {
+                tip.textContent = '保存失败'
+                saveBtn.disabled = false
+              })
+          }, true)
+        }
+      })()
+    }
+  </script>
+</body>
+</html>
