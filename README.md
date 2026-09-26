@@ -24,6 +24,8 @@ VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。
 
 这个提醒依据网页元素判断，网站改版可能需要更新扩展；关闭的标签页、其他设备和后台云端任务不保证收到。网页 ChatGPT 与本机 Codex 会话不是同一套日志：[OpenAI 官方说明](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex)将 Chat/Work 与桌面 Codex 区分开。开发者 API 的[完成 Webhook](https://developers.openai.com/api/docs/guides/webhooks)也不提供无密钥读取现有网页对话的能力。
 
+扩展 **0.5.2** 放宽了对网页消息节点稳定性的要求，增加“正在生成 → 结束”的识别路径；弹窗会显示最近的网页检测状态。升级已安装的解压扩展时，在 Chrome/Edge 扩展管理页点「重新加载」，然后刷新 `chatgpt.com` 标签页。桌面程序保持 0.5.1，无需重装。
+
 ### 视频播放兼容性
 
 0.4.2 起，Windows 桌面窗口的实际尺寸会跟随鲸鱼缩到局部区域，菜单或提示出现时才按需扩展；系统层面的鼠标命中区也始终限制在可见内容附近。点击鲸鱼不会再短暂占用整个屏幕，移开指针后浏览器可以接收滚轮。拖动鲸鱼时保留指针捕获，松开后窗口恢复到局部区域。菜单打开时仍可输入 API Key。

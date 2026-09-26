@@ -1,4 +1,14 @@
 const status = document.getElementById('status')
+const diagnostic = document.getElementById('diagnostic')
+function showDiagnostic(value) {
+  diagnostic.textContent = value && value.stage
+    ? '网页检测：' + value.stage
+    : '网页检测：请刷新 chatgpt.com 标签页'
+}
+chrome.storage.local.get('lastWebState', data => showDiagnostic(data.lastWebState))
+chrome.storage.onChanged.addListener(changes => {
+  if (changes.lastWebState) showDiagnostic(changes.lastWebState.newValue)
+})
 function request(type) {
   status.textContent = type === 'test' ? '正在发送测试提醒…' : '正在检查连接…'
   chrome.runtime.sendMessage({ type }, result => {

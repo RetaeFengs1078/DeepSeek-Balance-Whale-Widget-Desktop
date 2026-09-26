@@ -40,6 +40,12 @@ async function sendCompletion(conversation) {
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (!message || typeof message.type !== 'string') return
+  if (message.type === 'diagnostic') {
+    if (!sender.tab || !/^https:\/\/chatgpt\.com\//.test(sender.url || '')) return
+    const stage = String(message.stage || '').slice(0, 60)
+    chrome.storage.local.set({ lastWebState: { stage, time: Date.now() } }, () => respond({ ok: !chrome.runtime.lastError }))
+    return true
+  }
   if (message.type === 'completion') {
     if (!sender.tab || !/^https:\/\/chatgpt\.com\//.test(sender.url || '')) return
     sendCompletion(message.conversation).then(respond)
