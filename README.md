@@ -1,4 +1,4 @@
-> **来源声明 / Attribution**：本项目是原作者 **MeteorNOX** 的 [DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)（MIT 协议）的二次开发（衍生作品）。小鲸鱼本体的设计与实现归原作者所有，本仓库只在其外层加了一层 Electron 桌面壳，使其可脱离 DeepSeek Harness 独立运行。本仓库非官方版本，与原作者无关联。
+> **来源声明 / Attribution**：小鲸鱼本体来自 **MeteorNOX** 的 [DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)（MIT 协议）；独立 Electron 桌面版来自 **GoRmiTz**。此分支增加原生 Codex 额度读取、中文额度界面和 Windows 安装功能。保留原作者许可及署名。本项目是非官方衍生版本。
 
 ---
 
@@ -6,22 +6,29 @@
 
 ## Codex 原生额度版
 
-现在无需 DeepSeek Harness、Codex 桌面端或 OpenAI API Key，即可直接运行 Windows 小鲸鱼。程序只读 `%USERPROFILE%\.codex\sessions`；如果设置了 `CODEX_HOME`，则从该目录的 `sessions` 读取，并兼容 `archived_sessions`。它从 `rollout-*.jsonl` 中挑选最新的有效 `rate_limits` 快照，按 `window_minutes` 区分 5 小时（300）和每周（10080）额度。只出现一个窗口时只显示该窗口。额度卡片显示已用、剩余百分比和本地时间的重置时刻。
+### Windows 安装与开机自启
 
-首次运行直接双击 `WhaleWidget.exe` 即可，不必填写 `config.json`。鲸鱼每 60 秒自动刷新；点击鲸鱼、挂件菜单中的「Codex 额度 → 立即刷新」也可手动刷新。没有 DeepSeek Key 时，鲸鱼自动进入 Codex 模式；如果填写了 DeepSeek Key，原有的余额功能继续可用，同时显示 Codex 额度卡片。托盘、拖动、置顶、动画与音效功能沿用原桌面版。
+下载安装包，解压后双击 `安装鲸鱼.cmd`。安装脚本将完整程序复制到当前用户的 `%LOCALAPPDATA%\Programs\CodexWhaleWidget`，在开始菜单建立「Codex 额度小鲸鱼」入口，注册到 Windows「已安装的应用」，并为当前用户开启登录后自动运行；不需要管理员权限。托盘菜单和鲸鱼菜单都有「开机自启动」开关。Windows「已安装的应用」中可卸载，卸载时保留 `config.json`、`data` 和 `sounds` 等个人配置。
+
+鲸鱼上方的常显额度面板现在默认关闭。点击鲸鱼仍可看到额度气泡；若要恢复常显面板，可在鲸鱼菜单或托盘菜单中勾选「常显额度面板」。
+
+现在无需 DeepSeek Harness、Codex 桌面端或 OpenAI API Key，即可直接运行 Windows 小鲸鱼。程序只读 `%USERPROFILE%\.codex\sessions`；如果设置了 `CODEX_HOME`，则从该目录的 `sessions` 读取，并兼容 `archived_sessions`。它从 `rollout-*.jsonl` 中挑选最新的有效 `rate_limits` 快照，按 `window_minutes` 区分 5 小时（300）和每周（10080）额度。只出现一个窗口时只显示该窗口。开启常显卡片后会显示已用、剩余百分比和本地时间的重置时刻。
+
+便携版可直接双击 `WhaleWidget.exe`，不必填写 `config.json`。鲸鱼每 60 秒自动刷新；点击鲸鱼、挂件菜单中的「Codex 额度 → 立即刷新」也可手动刷新。没有 DeepSeek Key 时，鲸鱼自动进入 Codex 模式；如果填写了 DeepSeek Key，原有的余额功能继续可用。托盘、拖动、置顶、动画与音效功能沿用原桌面版。
 
 源码验证：`node --test test/*.test.mjs`。打包：`npm install` 后运行 `npm run dist`，成品位于 `dist/WhaleWidget-win32-x64/`，分发时须保留整个文件夹。无需上传或修改 Codex 会话文件。
 
 > 把只能在 DeepSeek Harness 里用的「小鲸鱼余额挂件」，搬出来变成一个**无边框、背景透明、只显示小鲸鱼**的 Windows 桌面悬浮窗。
 >
-> **English:** A standalone Windows desktop version of the DeepSeek balance whale widget — frameless, transparent, click-through window that shows only the whale, packable as a single `.exe`.
+> **English:** A standalone Windows desktop version of the DeepSeek balance whale widget — frameless, transparent, and packaged as a Windows application.
 
 **一句话说清三者关系：**
 
 | | 是什么 | 谁做的 |
 |---|---|---|
 | **原项目**<br>DeepSeek-Balance-Whale-Widget | DeepSeek Harness 网页界面右下角的余额挂件插件 | **MeteorNOX** |
-| **本仓库**<br>DeepSeek-Balance-Whale-Widget-Desktop | 套在原项目外面的一层「桌面壳」，让它能独立运行＋打包成 exe | **GoRmiTz**（我） |
+| **桌面版来源**<br>DeepSeek-Balance-Whale-Widget-Desktop | 套在原项目外面的桌面壳，让它能独立运行 | **GoRmiTz** |
+| **此分支** | 原生读取 Codex 额度、中文额度界面、Windows 安装及自启 | **RetaeFengs1078** |
 | **原版本体** | 本仓库里 `vendor/dsh-whale-widget/` 就是原版插件，仅改动 1 行 | **MeteorNOX** |
 
 **本仓库新增的能力**（也就是我实际写的部分）：Electron 无边框透明窗口、鼠标穿透、窗口置顶、任意位置拖动、自定义音效目录、独立的「假 ctx」宿主服务、打包成 exe。

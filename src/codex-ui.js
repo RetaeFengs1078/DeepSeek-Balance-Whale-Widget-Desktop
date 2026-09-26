@@ -5,7 +5,21 @@
   panel.id = 'codex-quota'
   panel.setAttribute('aria-live', 'polite')
   panel.innerHTML = '<div class="codex-title">Codex 额度</div><div class="codex-content">正在读取本地会话…</div>'
+  panel.hidden = true
   document.body.appendChild(panel)
+
+  var panelToggle = null
+  var startupToggle = null
+  function applySettings(settings) {
+    var show = !!(settings && settings.showQuotaPanel)
+    panel.hidden = !show
+    if (panelToggle) panelToggle.checked = show
+    if (startupToggle) startupToggle.checked = !!(settings && settings.autoStart)
+  }
+  if (window.__whale && window.__whale.getSettings) {
+    window.__whale.getSettings().then(applySettings).catch(function () {})
+    if (window.__whale.onSettingsChanged) window.__whale.onSettingsChanged(applySettings)
+  }
 
   function pct(value) { return Number(value).toFixed(Number.isInteger(value) ? 0 : 1) + '%' }
   function resetTime(value) {
@@ -66,6 +80,7 @@
       bubbleBox.appendChild(bubbleText)
       if (latest) paint(latest)
     }
+    if (panel.hidden) return
     var rect = image.getBoundingClientRect()
     if (rect.width <= 0) return
     var width = panel.offsetWidth
@@ -103,6 +118,30 @@
     rowElement.appendChild(button)
     menu.appendChild(separator)
     menu.appendChild(rowElement)
+
+    if (!window.__whale || !window.__whale.patchSettings) return
+    function settingRow(text, field) {
+      var row = document.createElement('label')
+      row.className = 'dshwv-menu-row codex-ext'
+      var checkbox = document.createElement('input')
+      checkbox.type = 'checkbox'
+      checkbox.className = 'dshwv-check'
+      var caption = document.createElement('span')
+      caption.textContent = text
+      row.appendChild(checkbox)
+      row.appendChild(caption)
+      row.addEventListener('click', function (event) { event.stopPropagation() })
+      menu.appendChild(row)
+      checkbox.addEventListener('change', function (event) {
+        event.stopPropagation()
+        window.__whale.patchSettings({ [field]: checkbox.checked })
+          .then(applySettings).catch(function () { checkbox.checked = !checkbox.checked })
+      })
+      return checkbox
+    }
+    panelToggle = settingRow('常显额度面板', 'showQuotaPanel')
+    startupToggle = settingRow('开机自启动', 'autoStart')
+    window.__whale.getSettings().then(applySettings).catch(function () {})
   }, 300)
 
   refresh()

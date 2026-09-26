@@ -19,5 +19,8 @@ contextBridge.exposeInMainWorld('__whale', {
   reportState: (rect, force) => ipcRenderer.send('whale:state', { rect, force }),
   getSettings: () => ipcRenderer.invoke('whale:settings'),
   patchSettings: (patch) => ipcRenderer.invoke('whale:settings:patch', patch),
+  onSettingsChanged: (callback) => {
+    if (typeof callback === 'function') ipcRenderer.on('whale:settings-updated', (_event, settings) => callback(settings))
+  },
   openSounds: () => ipcRenderer.invoke('whale:open-sounds'),
 })

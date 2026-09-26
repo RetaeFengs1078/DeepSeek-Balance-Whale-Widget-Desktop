@@ -27,7 +27,8 @@ let winPos = [0, 0]
 // 桌面端自己的设置（跟插件的尺寸配置分开存，互不覆盖）
 //   alwaysOnTop —— 窗口置顶
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
-const settings = { alwaysOnTop: true, soundSet: '' }
+const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false }
+const LOGIN_ITEM_NAME = 'CodexWhaleWidget'
 let settingsPath = null
 let soundsDirPath = ''
 let trayRef = null
@@ -49,6 +50,7 @@ function loadSettings() {
       if (parsed && typeof parsed === 'object') {
         if (typeof parsed.alwaysOnTop === 'boolean') settings.alwaysOnTop = parsed.alwaysOnTop
         if (typeof parsed.soundSet === 'string') settings.soundSet = parsed.soundSet
+        if (typeof parsed.showQuotaPanel === 'boolean') settings.showQuotaPanel = parsed.showQuotaPanel
         return
       }
     } catch (err) { /* 继续试下一个 */ }
@@ -58,6 +60,24 @@ function loadSettings() {
 function saveSettings() {
   if (!settingsPath) return
   try { fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8') } catch (err) { /* 忽略 */ }
+}
+
+function autoStartEnabled() {
+  if (process.platform !== 'win32' || !app.isPackaged) return false
+  try { return app.getLoginItemSettings({ path: process.execPath }).openAtLogin }
+  catch { return false }
+}
+
+function setAutoStart(enabled) {
+  if (process.platform !== 'win32' || !app.isPackaged) return false
+  try { app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, name: LOGIN_ITEM_NAME }) }
+  catch (err) { console.error('[whale] 开机自启动设置失败:', err) }
+  return autoStartEnabled()
+}
+
+function currentSettings() { return { ...settings, autoStart: autoStartEnabled() } }
+function announceSettings() {
+  if (win && !win.isDestroyed()) win.webContents.send('whale:settings-updated', currentSettings())
 }
 
 // 只允许一个实例，否则会起两个本地服务、两只鲸鱼
@@ -220,15 +240,18 @@ ipcMain.on('whale:state', (_event, state) => {
   syncInteractive()
 })
 
-ipcMain.handle('whale:settings', () => ({ ...settings }))
+ipcMain.handle('whale:settings', () => currentSettings())
 
 ipcMain.handle('whale:settings:patch', (_event, patch) => {
-  if (!patch || typeof patch !== 'object') return { ...settings }
+  if (!patch || typeof patch !== 'object') return currentSettings()
   if (typeof patch.alwaysOnTop === 'boolean') { settings.alwaysOnTop = patch.alwaysOnTop; applyTop() }
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
+  if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
+  if (typeof patch.autoStart === 'boolean') setAutoStart(patch.autoStart)
   saveSettings()
   buildTrayMenu()
-  return { ...settings }
+  announceSettings()
+  return currentSettings()
 })
 
 ipcMain.handle('whale:open-sounds', () => {
@@ -261,6 +284,19 @@ function buildTrayMenu() {
         buildTrayMenu()
       },
     },
+    {
+      label: '常显额度面板', type: 'checkbox', checked: settings.showQuotaPanel,
+      click: () => {
+        settings.showQuotaPanel = !settings.showQuotaPanel
+        saveSettings()
+        announceSettings()
+        buildTrayMenu()
+      },
+    },
+    {
+      label: '开机自启动', type: 'checkbox', checked: autoStartEnabled(), enabled: app.isPackaged,
+      click: () => { setAutoStart(!autoStartEnabled()); announceSettings(); buildTrayMenu() },
+    },
     { type: 'separator' },
     { label: '打开音效文件夹', click: () => { if (soundsDirPath) shell.openPath(soundsDirPath) } },
     { label: '编辑 config.json', click: () => shell.openPath(trayConfigPath) },
@@ -272,6 +308,7 @@ function buildTrayMenu() {
 }
 
 app.whenReady().then(async () => {
+  if (process.platform === 'win32') app.setAppUserModelId(LOGIN_ITEM_NAME)
   // 本地服务跑在主进程里，不需要额外的 node 子进程
   const mod = await import('../server.mjs')
   const started = await mod.startServer({ root: APP_ROOT })
