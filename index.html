@@ -42,14 +42,6 @@
     box-shadow: 0 4px 15px rgba(0,0,0,.24); pointer-events: none; visibility: hidden;
     user-select: none; }
   #codex-quota[hidden] { display: none; }
-  #codex-completion { position: fixed; z-index: 9999; box-sizing: border-box;
-    max-width: 280px; min-width: 170px; padding: 9px 11px; border-radius: 12px;
-    border: 1px solid rgba(102,151,213,.7); background: rgba(24,42,71,.96);
-    box-shadow: 0 6px 18px rgba(0,0,0,.3); color: #ecf6ff; font-size: 12px;
-    line-height: 1.45; pointer-events: none; user-select: none; text-align: left; }
-  #codex-completion[hidden] { display: none; }
-  .codex-completion-source { color: #a7d5ff; font-weight: 700; }
-  .codex-completion-title { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .codex-ext:has(input:disabled) { opacity: .45; cursor: not-allowed; }
   .codex-title { font-size: 12px; font-weight: 700; margin-bottom: 3px; color: #a7d5ff; }
   .codex-row { display: flex; justify-content: space-between; gap: 5px; white-space: nowrap; }
@@ -57,6 +49,12 @@
   .codex-reset { color: #abc1da; text-align: right; margin-bottom: 3px; }
   html.codex-only .err { display: none !important; }
   html.codex-only .dshwv-text { visibility: hidden; }
+  .dshwv-bubble.dshwv-completion-open .dshwv-text { visibility: visible; width: 68%; white-space: normal; }
+  .dshwv-completion-open .dshwv-label { font-size: calc(var(--dshw-u) * 57); letter-spacing: 0; }
+  .dshwv-completion-open .dshwv-amount { font-size: calc(var(--dshw-u) * 65); line-height: 1.12;
+    display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; overflow-wrap: anywhere; }
+  .dshwv-bubble.dshwv-completion-open .codex-bubble { visibility: hidden; }
   .codex-bubble { position: absolute; left: 44%; top: 38%;
     transform: translate(-50%,-50%); color: #536ba9; white-space: nowrap;
     font-weight: 700; font-size: calc(var(--dshw-u) * 90); pointer-events: none;
@@ -89,6 +87,7 @@
     if (DESKTOP) {
       window.__whaleCustomSound = ''
       var _Audio = window.Audio
+      window.__whaleBuiltinAudio = _Audio
       window.Audio = function (src) {
         try {
           if (window.__whaleCustomSound && typeof src === 'string' && src.indexOf('/dsh-whale/sound/') !== -1) {
@@ -149,8 +148,6 @@
         include(menu)
         var quota = document.getElementById('codex-quota')
         if (quota && !quota.hidden && quota.style.visibility !== 'hidden') include(quota)
-        var notice = document.getElementById('codex-completion')
-        if (notice && !notice.hidden) include(notice)
         var key = JSON.stringify([rect, menuRect, dragging, regions].map(function (item) {
           if (Array.isArray(item)) return item.map(function (box) { return [box.x, box.y, box.w, box.h].map(Math.round) })
           if (item && typeof item === 'object') return [item.x, item.y, item.w, item.h].map(Math.round)

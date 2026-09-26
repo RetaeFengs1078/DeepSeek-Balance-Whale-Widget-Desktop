@@ -7,13 +7,6 @@
   panel.innerHTML = '<div class="codex-title">Codex 额度</div><div class="codex-content">正在读取本地会话…</div>'
   panel.hidden = true
   document.body.appendChild(panel)
-  var completion = document.createElement('div')
-  completion.id = 'codex-completion'
-  completion.setAttribute('role', 'status')
-  completion.setAttribute('aria-live', 'polite')
-  completion.hidden = true
-  completion.innerHTML = '<div class="codex-completion-source"></div><div class="codex-completion-title"></div>'
-  document.body.appendChild(completion)
 
   var panelToggle = null
   var startupToggle = null
@@ -58,16 +51,14 @@
   var remoteStatus = null
   function showNextCompletion() {
     if (showingCompletion || !completionQueue.length) return
+    if (typeof window.whaleShowCompletion !== 'function') {
+      setTimeout(showNextCompletion, 300)
+      return
+    }
     showingCompletion = true
     var event = completionQueue.shift()
-    completion.querySelector('.codex-completion-source').textContent = event.source + ' · 已完成'
-    completion.querySelector('.codex-completion-title').textContent = event.conversation
-    completion.hidden = false
-    position()
-    if (window.whaleReportState) window.whaleReportState()
+    window.whaleShowCompletion(event)
     setTimeout(function () {
-      completion.hidden = true
-      if (window.whaleReportState) window.whaleReportState()
       showingCompletion = false
       setTimeout(showNextCompletion, 200)
     }, 8500)
@@ -137,13 +128,6 @@
     }
     var rect = image.getBoundingClientRect()
     if (rect.width <= 0) return
-    if (!completion.hidden) {
-      var toastWidth = completion.offsetWidth
-      var toastHeight = completion.offsetHeight
-      completion.style.left = Math.round(Math.max(8, Math.min(innerWidth - toastWidth - 8, rect.left + rect.width / 2 - toastWidth / 2))) + 'px'
-      var toastAbove = rect.top - toastHeight - 10
-      completion.style.top = Math.round(toastAbove >= 8 ? toastAbove : Math.min(innerHeight - toastHeight - 8, rect.bottom + 10)) + 'px'
-    }
     if (panel.hidden) return
     var width = panel.offsetWidth
     var height = panel.offsetHeight

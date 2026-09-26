@@ -388,6 +388,7 @@ bubbleBox.appendChild(textBox)
 bubbleBox.addEventListener('click', function (e) {
   e.stopPropagation()
   if (!bubbleShown) return
+  if (completionActive) { hideBubble(); return }
   if (costBubbleActive) {
     // 消耗金额泡泡：点击关闭（确认）
     hideCostBubble()
@@ -444,6 +445,7 @@ var shown = null
 var animId = null
 var bubbleShown = false
 var bubbleTimer = null
+var completionActive = false
 var bubbleRandomActive = false
 var bubbleRandomLines = null
 var BUBBLE_STYLE_CLASS = { A: 'dshwv-label', B: 'dshwv-amount', P: 'dshwv-period', C: 'dshwv-hint' }
@@ -589,6 +591,8 @@ function showBubble() {
   if (gifFadeTimer) { clearTimeout(gifFadeTimer); gifFadeTimer = null }
   bubbleShown = true
   bubbleRandomActive = false
+  completionActive = false
+  bubbleBox.classList.remove('dshwv-completion-open')
   restoreBubbleLines()
   bubbleBox.classList.add('dshwv-bubble-open')
   // 默认展示当前内容；点击气泡切到随机台词段；总时长 5 秒自动关闭
@@ -605,16 +609,39 @@ function hideBubble() {
   bubbleRandomActive = false
   bubbleRandomLines = null
   bubbleShown = false
+  completionActive = false
   // 只销毁 gif 显示；三行文字保持现状让气泡自然淡出——不能在关闭瞬间
   // 恢复成余额内容（否则随机台词界面会闪现余额）。文字恢复交给下次
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
-  bubbleBox.classList.remove('dshwv-bubble-open')
+  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open')
   // gif 靠 CSS opacity 过渡淡出；display:none 会跳过过渡，须等淡出完成再隐藏
   gifFadeTimer = setTimeout(function () {
     gifFadeTimer = null
     gifEl.style.display = 'none'
   }, 240)
 }
+
+function showCompletionBubble(event) {
+  if (!event) return
+  if (costBubbleTimer) { clearTimeout(costBubbleTimer); costBubbleTimer = null }
+  costBubbleActive = false
+  if (bubbleTimer) { clearTimeout(bubbleTimer); bubbleTimer = null }
+  if (animId) { cancelAnimationFrame(animId); animId = null }
+  if (animDelayTimer) { clearTimeout(animDelayTimer); animDelayTimer = null }
+  restoreBubbleLines()
+  completionActive = true
+  bubbleRandomActive = false
+  bubbleRandomLines = null
+  bubbleShown = true
+  labelEl.textContent = String(event.source || 'Codex') + ' · 已完成'
+  amountEl.textContent = String(event.conversation || '任务已完成')
+  hintEl.style.display = 'none'
+  bubbleBox.classList.add('dshwv-completion-open', 'dshwv-bubble-open')
+  bubbleTimer = setTimeout(hideBubble, 8500)
+  if (window.whaleReportState) window.whaleReportState()
+  playDuckCompletion()
+}
+window.whaleShowCompletion = showCompletionBubble
 
 // —— 每轮对话消耗金额泡泡 ——
 var costBubbleTimer = null
@@ -685,7 +712,7 @@ function fmt(balance, currency) {
 }
 function animateAmount(from, to, currency, duration) {
   // 消耗金额泡泡显示期间，余额数字滚动不触碰金额行
-  if (costBubbleActive) return
+  if (costBubbleActive || completionActive) return
   if (animId) cancelAnimationFrame(animId)
   if (from === null || !isFinite(from)) from = to
   if (from === to) {
@@ -717,7 +744,7 @@ function animateAmount(from, to, currency, duration) {
 }
 function render() {
   // 消耗金额泡泡显示期间，余额渲染不覆盖其内容（金额行/标题行/提示行）
-  if (costBubbleActive) return
+  if (costBubbleActive || completionActive) return
   var amount, hint
   if (state.status === 'error') {
     amount = shown !== null ? fmt(shown, state.currency) : '--'
@@ -980,6 +1007,23 @@ var pressing = false
 var pressEnded = false
 var releasePlayed = false
 var releaseTimer = null
+function playDuckCompletion() {
+  if (!soundOn || soundVol <= 0) return
+  try {
+    // 完成提醒固定用内置小黄鸭音效，不受自定义点击音效包影响。
+    var SoundAudio = window.__whaleBuiltinAudio || window.Audio
+    var press = new SoundAudio('/dsh-whale/sound/press.mp3?set=duck')
+    press.volume = soundVol
+    press.onended = function () {
+      var release = new SoundAudio('/dsh-whale/sound/release.mp3?set=duck')
+      release.volume = soundVol
+      var next = release.play()
+      if (next && next.catch) next.catch(function () {})
+    }
+    var first = press.play()
+    if (first && first.catch) first.catch(function () {})
+  } catch (err) {}
+}
 function applySoundSet() {
   try {
     pressAudio = new Audio('/dsh-whale/sound/press.mp3?set=' + soundSet)
