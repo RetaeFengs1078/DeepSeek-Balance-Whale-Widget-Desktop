@@ -51,6 +51,9 @@
   var activeCompletion = null
   var remoteStatus = null
   var usageStatus = null
+  var latestUsage = null
+  var lastWhaleTapAt = 0
+  var usageBubbleRequest = 0
   // 暂停完成气泡的点击跳转；保留提醒和后端能力，方便以后恢复。
   var completionNavigationEnabled = false
   function showNextCompletion() {
@@ -119,10 +122,12 @@
       .finally(function () { busy = false })
   }
   function refreshUsage() {
-    fetch('/whale/usage', { cache: 'no-store' })
+    return fetch('/whale/usage', { cache: 'no-store' })
       .then(function (response) { return response.json() })
       .then(function (data) {
-        if (!data || !data.ok || !usageStatus) return
+        if (!data || !data.ok) return null
+        latestUsage = data
+        if (!usageStatus) return data
         var chrome = data.browsers && data.browsers.Chrome || {}
         var edge = data.browsers && data.browsers.Edge || {}
         var quota = data.codexUsage || {}
@@ -131,7 +136,34 @@
         usageStatus.textContent = '6 Pro Chrome：今日 ' + (chrome.today || 0) + ' / 本周 ' + (chrome.weekly || 0) +
           '\n6 Pro Edge：今日 ' + (edge.today || 0) + ' / 本周 ' + (edge.weekly || 0) +
           '\n今日 Codex 额度消耗：5h ' + pct(five) + ' · 周 ' + pct(week)
-      }).catch(function () {})
+        return data
+      }).catch(function () { return null })
+  }
+  function usageBubbleText(data) {
+    if (!data || !data.browsers) return { counts: '读取中…', resets: '' }
+    var counts = []
+    var resets = []
+    ;['Chrome', 'Edge'].forEach(function (name) {
+      var browser = data.browsers[name] || {}
+      var count = Number(browser.weekly)
+      counts.push(name + '  ' + (Number.isFinite(count) ? Math.max(0, count) : 0) + ' 次')
+      resets.push(name + '  ' + (browser.nextResetAt ? resetTime(browser.nextResetAt) : '重置时间未设置'))
+    })
+    return { counts: counts.join('\n'), resets: resets.join('\n') }
+  }
+  window.whaleOnTap = function () {
+    var now = Date.now()
+    if (now - lastWhaleTapAt > 550) { lastWhaleTapAt = now; return false }
+    lastWhaleTapAt = 0
+    if (typeof window.whaleShowUsage !== 'function') return false
+    var request = ++usageBubbleRequest
+    window.whaleShowUsage(usageBubbleText(latestUsage))
+    refreshUsage().then(function (data) {
+      if (request !== usageBubbleRequest) return
+      if (!document.querySelector('.dshwv-bubble-open.dshwv-usage-open')) return
+      window.whaleShowUsage(data ? usageBubbleText(data) : { counts: '统计读取失败', resets: '请稍后再试' })
+    })
+    return true
   }
   window.whaleRefreshCodex = refresh
 

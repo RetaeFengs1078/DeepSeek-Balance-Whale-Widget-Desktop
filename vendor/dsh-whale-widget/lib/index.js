@@ -592,7 +592,7 @@ function showBubble() {
   bubbleShown = true
   bubbleRandomActive = false
   completionActive = false
-  bubbleBox.classList.remove('dshwv-completion-open')
+  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open')
   restoreBubbleLines()
   bubbleBox.classList.add('dshwv-bubble-open')
   // 默认展示当前内容；点击气泡切到随机台词段；总时长 5 秒自动关闭
@@ -613,7 +613,7 @@ function hideBubble() {
   // 只销毁 gif 显示；三行文字保持现状让气泡自然淡出——不能在关闭瞬间
   // 恢复成余额内容（否则随机台词界面会闪现余额）。文字恢复交给下次
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
-  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open')
+  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open')
   // gif 靠 CSS opacity 过渡淡出；display:none 会跳过过渡，须等淡出完成再隐藏
   gifFadeTimer = setTimeout(function () {
     gifFadeTimer = null
@@ -636,12 +636,37 @@ function showCompletionBubble(event) {
   labelEl.textContent = String(event.source || 'Codex') + ' · 已完成'
   amountEl.textContent = String(event.conversation || '任务已完成')
   hintEl.style.display = 'none'
+  bubbleBox.classList.remove('dshwv-usage-open')
   bubbleBox.classList.add('dshwv-completion-open', 'dshwv-bubble-open')
   bubbleTimer = setTimeout(hideBubble, 8500)
   if (window.whaleReportState) window.whaleReportState()
   playDuckCompletion()
 }
 window.whaleShowCompletion = showCompletionBubble
+
+function showUsageBubble(usage) {
+  if (!bubbleOn || !usage) return
+  if (costBubbleTimer) { clearTimeout(costBubbleTimer); costBubbleTimer = null }
+  costBubbleActive = false
+  if (bubbleTimer) { clearTimeout(bubbleTimer); bubbleTimer = null }
+  if (animId) { cancelAnimationFrame(animId); animId = null }
+  if (animDelayTimer) { clearTimeout(animDelayTimer); animDelayTimer = null }
+  completionActive = false
+  restoreBubbleLines()
+  completionActive = true // 保持统计内容，不被余额刷新覆盖。
+  bubbleRandomActive = false
+  bubbleRandomLines = null
+  bubbleShown = true
+  labelEl.textContent = '6 Pro · 重置前已用'
+  amountEl.textContent = String(usage.counts || '读取中…')
+  hintEl.textContent = String(usage.resets || '')
+  hintEl.style.display = usage.resets ? '' : 'none'
+  bubbleBox.classList.remove('dshwv-completion-open')
+  bubbleBox.classList.add('dshwv-usage-open', 'dshwv-bubble-open')
+  bubbleTimer = setTimeout(hideBubble, 8500)
+  if (window.whaleReportState) window.whaleReportState()
+}
+window.whaleShowUsage = showUsageBubble
 
 // —— 每轮对话消耗金额泡泡 ——
 var costBubbleTimer = null
@@ -1288,7 +1313,11 @@ function endDrag(e, clickAllowed) {
   pressUp()
   root.classList.remove('dshwv-dragging')
   setWidgetCursor(isWhaleHit(e) ? 'grab' : '')
-  if (clickAllowed && !drag.moved) { showBubble(); refresh(true); return }
+  if (clickAllowed && !drag.moved) {
+    if (!(window.whaleOnTap && window.whaleOnTap())) showBubble()
+    refresh(true)
+    return
+  }
   var dx = pointerX(e) - drag.startX
   var dy = pointerY(e) - drag.startY
   var left = clamp(drag.origLeft + dx, 0, Math.max(0, drag.vp.w - drag.w))
