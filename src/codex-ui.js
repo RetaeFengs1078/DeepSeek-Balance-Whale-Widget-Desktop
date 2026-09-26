@@ -7,6 +7,13 @@
   panel.innerHTML = '<div class="codex-title">Codex 额度</div><div class="codex-content">正在读取本地会话…</div>'
   panel.hidden = true
   document.body.appendChild(panel)
+  var completion = document.createElement('div')
+  completion.id = 'codex-completion'
+  completion.setAttribute('role', 'status')
+  completion.setAttribute('aria-live', 'polite')
+  completion.hidden = true
+  completion.innerHTML = '<div class="codex-completion-source"></div><div class="codex-completion-title"></div>'
+  document.body.appendChild(completion)
 
   var panelToggle = null
   var startupToggle = null
@@ -16,7 +23,11 @@
     panel.hidden = !show
     if (panelToggle) panelToggle.checked = show
     if (startupToggle) startupToggle.checked = !!(settings && settings.autoStart)
-    if (appLaunchToggle) appLaunchToggle.checked = !!(settings && settings.launchWithApps)
+    if (appLaunchToggle) {
+      appLaunchToggle.checked = !!(settings && settings.launchWithApps) && !(settings && settings.autoStart)
+      appLaunchToggle.disabled = !!(settings && settings.autoStart)
+      appLaunchToggle.title = appLaunchToggle.disabled ? '开机自启动已开启' : ''
+    }
   }
   if (window.__whale && window.__whale.getSettings) {
     window.__whale.getSettings().then(applySettings).catch(function () {})
@@ -40,6 +51,46 @@
   var latest = null
   var hasDeepSeekKey = false
   var busy = false
+  var completionQueue = []
+  var knownCompletions = {}
+  var completionReady = false
+  var showingCompletion = false
+  var remoteStatus = null
+  function showNextCompletion() {
+    if (showingCompletion || !completionQueue.length) return
+    showingCompletion = true
+    var event = completionQueue.shift()
+    completion.querySelector('.codex-completion-source').textContent = event.source + ' · 已完成'
+    completion.querySelector('.codex-completion-title').textContent = event.conversation
+    completion.hidden = false
+    position()
+    setTimeout(function () {
+      completion.hidden = true
+      showingCompletion = false
+      setTimeout(showNextCompletion, 200)
+    }, 8500)
+  }
+  function refreshCompletions() {
+    fetch('/whale/completions.json', { cache: 'no-store' })
+      .then(function (response) { return response.json() })
+      .then(function (data) {
+        if (!data || !data.ok) return
+        if (remoteStatus) {
+          var hosts = data.remoteHosts || {}
+          var names = Object.keys(hosts)
+          remoteStatus.textContent = names.length ? '远端：' + names.map(function (host) { return host + ' ' + hosts[host] }).join('；') : '远端：未配置'
+        }
+        var events = data.events || []
+        for (var i = 0; i < events.length; i++) {
+          var item = events[i]
+          if (!item || !item.id || knownCompletions[item.id]) continue
+          knownCompletions[item.id] = true
+          if (completionReady || Date.now() - item.time < 15000) completionQueue.push(item)
+        }
+        completionReady = true
+        showNextCompletion()
+      }).catch(function () {})
+  }
   function paint(data) {
     var content = panel.querySelector('.codex-content')
     if (!content) return
@@ -82,9 +133,16 @@
       bubbleBox.appendChild(bubbleText)
       if (latest) paint(latest)
     }
-    if (panel.hidden) return
     var rect = image.getBoundingClientRect()
     if (rect.width <= 0) return
+    if (!completion.hidden) {
+      var toastWidth = completion.offsetWidth
+      var toastHeight = completion.offsetHeight
+      completion.style.left = Math.round(Math.max(8, Math.min(innerWidth - toastWidth - 8, rect.left + rect.width / 2 - toastWidth / 2))) + 'px'
+      var toastAbove = rect.top - toastHeight - 10
+      completion.style.top = Math.round(toastAbove >= 8 ? toastAbove : Math.min(innerHeight - toastHeight - 8, rect.bottom + 10)) + 'px'
+    }
+    if (panel.hidden) return
     var width = panel.offsetWidth
     var height = panel.offsetHeight
     panel.style.left = Math.round(Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2))) + 'px'
@@ -121,6 +179,14 @@
     menu.appendChild(separator)
     menu.appendChild(rowElement)
 
+    var statusRow = document.createElement('div')
+    statusRow.className = 'dshwv-menu-row codex-ext'
+    remoteStatus = document.createElement('span')
+    remoteStatus.style.cssText = 'font-size:11px;color:#6b7ba6;white-space:normal'
+    remoteStatus.textContent = '远端：检查中…'
+    statusRow.appendChild(remoteStatus)
+    menu.appendChild(statusRow)
+
     if (!window.__whale || !window.__whale.patchSettings) return
     function settingRow(text, field) {
       var row = document.createElement('label')
@@ -148,5 +214,7 @@
   }, 300)
 
   refresh()
+  refreshCompletions()
+  setInterval(refreshCompletions, 3000)
   setInterval(refresh, 60000)
 })()

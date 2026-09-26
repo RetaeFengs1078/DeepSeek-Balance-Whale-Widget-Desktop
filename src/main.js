@@ -67,14 +67,18 @@ function saveSettings() {
 
 function autoStartEnabled() {
   if (process.platform !== 'win32' || !app.isPackaged) return false
-  try { return app.getLoginItemSettings({ path: process.execPath }).openAtLogin }
-  catch { return false }
+  try { if (app.getLoginItemSettings({ path: process.execPath }).openAtLogin) return true }
+  catch {}
+  // 安装脚本直接登记 HKCU Run；Electron 在某些版本只认自己写入的条目。
+  const result = spawnSync('reg.exe', ['query', RUN_KEY, '/v', LOGIN_ITEM_NAME], { windowsHide: true })
+  return result.status === 0 && String(result.stdout || '').toLowerCase().includes(process.execPath.toLowerCase())
 }
 
 function setAutoStart(enabled) {
   if (process.platform !== 'win32' || !app.isPackaged) return false
   try { app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, name: LOGIN_ITEM_NAME }) }
   catch (err) { console.error('[whale] 开机自启动设置失败:', err) }
+  if (!enabled) spawnSync('reg.exe', ['delete', RUN_KEY, '/v', LOGIN_ITEM_NAME, '/f'], { windowsHide: true })
   return autoStartEnabled()
 }
 
@@ -282,8 +286,7 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
     setAutoStart(patch.autoStart)
   }
   if (typeof patch.launchWithApps === 'boolean') {
-    if (patch.launchWithApps) setAutoStart(false)
-    setLaunchWithApps(patch.launchWithApps)
+    if (!autoStartEnabled()) setLaunchWithApps(patch.launchWithApps)
   }
   saveSettings()
   buildTrayMenu()
@@ -341,10 +344,10 @@ function buildTrayMenu() {
       },
     },
     {
-      label: '打开 VS Code/ChatGPT 时启动', type: 'checkbox', checked: launchWithAppsEnabled(), enabled: app.isPackaged,
+      label: '打开 VS Code/ChatGPT 时启动', type: 'checkbox', checked: launchWithAppsEnabled() && !autoStartEnabled(), enabled: app.isPackaged && !autoStartEnabled(),
       click: () => {
+        if (autoStartEnabled()) return
         const enabled = !launchWithAppsEnabled()
-        if (enabled) setAutoStart(false)
         setLaunchWithApps(enabled)
         announceSettings()
         buildTrayMenu()

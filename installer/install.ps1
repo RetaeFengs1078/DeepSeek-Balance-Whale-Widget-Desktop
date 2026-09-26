@@ -52,7 +52,7 @@ $uninstallScript = Join-Path $installRoot 'uninstall.ps1'
 $psExe = (Get-Command powershell.exe).Source
 $fields = @{
   DisplayName = 'Codex 额度小鲸鱼'
-  DisplayVersion = '0.3.0'
+  DisplayVersion = '0.4.0'
   InstallLocation = $installRoot
   DisplayIcon = $installedExe
   UninstallString = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"')
@@ -63,11 +63,10 @@ foreach ($key in $fields.Keys) {
 New-ItemProperty -Path $uninstallKey -Name NoModify -Value 1 -PropertyType DWord -Force | Out-Null
 New-ItemProperty -Path $uninstallKey -Name NoRepair -Value 1 -PropertyType DWord -Force | Out-Null
 
-# 开机只启动隐藏监听器；打开 VS Code 或 ChatGPT 后才启动鲸鱼。
-Remove-ItemProperty -Path $runKey -Name $startupName -ErrorAction SilentlyContinue
-$watcherCommand = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watcherScript + '"')
-New-ItemProperty -Path $runKey -Name $watcherName -Value $watcherCommand -PropertyType String -Force | Out-Null
+# 默认开机自启动鲸鱼；原 VS Code/ChatGPT 联动监听器保留在设置中，默认关闭。
+Remove-ItemProperty -Path $runKey -Name $watcherName -ErrorAction SilentlyContinue
+New-ItemProperty -Path $runKey -Name $startupName -Value ('"' + $installedExe + '"') -PropertyType String -Force | Out-Null
 
-Start-Process -FilePath $psExe -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watcherScript + '"') -WindowStyle Hidden
+Start-Process -FilePath $installedExe -WorkingDirectory $installRoot
 Write-Output "已安装：$installedExe"
-Write-Output '已加入开始菜单和 Windows 已安装应用；登录后只运行隐藏监听器，打开 VS Code 或 ChatGPT 时启动鲸鱼。'
+Write-Output '已加入开始菜单和 Windows 已安装应用；登录 Windows 后小鲸鱼自动启动。'

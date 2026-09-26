@@ -9,12 +9,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { CodexReader } from './src/codex-reader.mjs'
+import { CodexCompletionReader } from './src/codex-completions.mjs'
+import { RemoteCompletionReader } from './src/remote-completions.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 
 const CONFIG_TEMPLATE = {
   DEEPSEEK_API_KEY: '',
   DEEPSEEK_PLATFORM_TOKEN: '',
+  CODEX_REMOTE_SSH_HOSTS: ['gpu-5', 'gpu-7'],
 }
 
 // 打包成 exe 之后，源码在只读的 app.asar 里，config.json / data 必须放到 exe 旁边。
@@ -71,6 +74,14 @@ export async function startServer(opts = {}) {
   }
   let fileCfg = loadConfig(dirs.configPath)
   const codexReader = new CodexReader()
+  const completionReader = new CodexCompletionReader()
+  await completionReader.refresh() // 启动前的旧事件只作基线，不弹历史通知。
+  const configuredHosts = fileCfg.CODEX_REMOTE_SSH_HOSTS ?? process.env.CODEX_REMOTE_SSH_HOSTS ?? ['gpu-5', 'gpu-7']
+  const remoteHosts = Array.isArray(configuredHosts) ? configuredHosts : String(configuredHosts).split(',').map((host) => host.trim()).filter(Boolean)
+  const remoteReader = new RemoteCompletionReader(remoteHosts)
+  const remoteTimer = setInterval(() => { remoteReader.refresh().catch(() => {}) }, 20000)
+  remoteTimer.unref()
+  remoteReader.refresh().catch(() => {})
   const reloadConfig = () => { fileCfg = loadConfig(dirs.configPath) }
 
   // 凭据：环境变量优先，其次 config.json（只在本机，不上传）。
@@ -86,6 +97,7 @@ export async function startServer(opts = {}) {
   const routes = []
   let indexTap = null
   const cleanups = []
+  cleanups.push(() => clearInterval(remoteTimer))
 
   const webServer = {
     register(spec) {
@@ -280,6 +292,19 @@ export async function startServer(opts = {}) {
       }).catch((err) => {
         res.writeHead(500, JSON_HEADERS)
         res.end(JSON.stringify({ ok: false, message: '读取 Codex 日志失败：' + err.message }))
+      })
+      return
+    }
+
+    if (pathname === '/whale/completions.json') {
+      if (req.method !== 'GET') { send(res, 405, 'method not allowed'); return }
+      completionReader.refresh().then((local) => {
+        const remote = { events: remoteReader.events, hosts: Object.fromEntries([...remoteReader.state].map(([host, state]) => [host, state.status])) }
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+        res.end(JSON.stringify({ ok: true, events: [...local, ...remote.events].sort((a, b) => a.time - b.time).slice(-30), remoteHosts: remote.hosts }))
+      }).catch(() => {
+        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+        res.end(JSON.stringify({ ok: false, events: [], remoteHosts: {} }))
       })
       return
     }

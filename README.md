@@ -10,7 +10,13 @@
 
 ### Windows 安装与应用启动联动
 
-下载安装包，解压后双击 `安装鲸鱼.cmd`。安装脚本将完整程序复制到当前用户的 `%LOCALAPPDATA%\Programs\CodexWhaleWidget`，在开始菜单建立「Codex 额度小鲸鱼」入口，并注册到 Windows「已安装的应用」；不需要管理员权限。登录后只运行隐藏监听器，**小鲸鱼不会随开机直接启动**。打开 VS Code 或 ChatGPT 时，监听器会启动小鲸鱼；关闭这两个程序后，小鲸鱼仍留在桌面。托盘菜单和鲸鱼菜单可切换「打开 VS Code/ChatGPT 时启动」与「开机自启动」两种方式。Windows「已安装的应用」中可卸载，卸载时保留 `config.json`、`data` 和 `sounds` 等个人配置。
+下载安装包，解压后双击 `安装鲸鱼.cmd`。安装脚本将完整程序复制到当前用户的 `%LOCALAPPDATA%\Programs\CodexWhaleWidget`，在开始菜单建立「Codex 额度小鲸鱼」入口，并注册到 Windows「已安装的应用」；不需要管理员权限。**默认登录 Windows 后自动启动小鲸鱼**。原「打开 VS Code/ChatGPT 时启动」功能仍在鲸鱼及托盘设置中，默认关闭；开机自启动开启时，该开关置灰，关闭开机自启动后才可启用。关闭 VS Code 或 ChatGPT 不会关闭已启动的小鲸鱼。Windows「已安装的应用」中可卸载，卸载时保留 `config.json`、`data` 和 `sounds` 等个人配置。
+
+### Codex 对话完成提醒
+
+小鲸鱼每 3 秒检查本机 Codex 会话日志中的 `task_complete`，完成时在鲸鱼上方显示来源与对话标题。支持本机 **Codex 客户端**、**VS Code Codex 插件**及命令行；过滤后台子任务，启动时不补弹旧提醒。对话标题优先取本机 Codex 数据库，读不到时显示首条提问或「未命名对话」。不读取聊天正文用于网络传输。
+
+VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。本机 `config.json` 的 `CODEX_REMOTE_SSH_HOSTS` 默认为 `["gpu-5", "gpu-7"]`；换电脑时可改成自己的 SSH Host 别名。需要 SSH 免交互登录且远端有 `python3`；登录失败时会退避重试。远端会话标题和完成时间只返回本机小鲸鱼，不上传第三方。**ChatGPT/Codex 网页端目前没有稳定的本地会话完成事件可读**，此版本尚不能保证网页任务提醒。
 
 鲸鱼上方的常显额度面板现在默认关闭。点击鲸鱼仍可看到额度气泡；若要恢复常显面板，可在鲸鱼菜单或托盘菜单中勾选「常显额度面板」。
 
