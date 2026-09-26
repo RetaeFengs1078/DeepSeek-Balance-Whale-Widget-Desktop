@@ -1,5 +1,5 @@
 // 独立宿主 —— 用「假 ctx」把 DSH 插件跑在任意 Node 环境里。
-// 原插件 vendor/dsh-whale-widget/lib/index.js 未做任何修改。
+// vendored 插件只保留桌面缩放和菜单点击修补，详见 NOTICE。
 //
 // 两种用法：
 //   1) 命令行直接跑：node server.mjs   （浏览器模式，见 start-browser.bat）

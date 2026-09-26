@@ -31,9 +31,9 @@
 | **原项目**<br>DeepSeek-Balance-Whale-Widget | DeepSeek Harness 网页界面右下角的余额挂件插件 | **MeteorNOX** |
 | **桌面版来源**<br>DeepSeek-Balance-Whale-Widget-Desktop | 套在原项目外面的桌面壳，让它能独立运行 | **GoRmiTz** |
 | **此分支** | 原生读取 Codex 额度、中文额度界面、Windows 安装及自启 | **OpenAI Codex（AI）参与开发；RetaeFengs1078 提出需求并维护 fork** |
-| **原版本体** | 本仓库里 `vendor/dsh-whale-widget/` 就是原版插件，仅改动 1 行 | **MeteorNOX** |
+| **原版本体** | `vendor/dsh-whale-widget/` 保留原插件，并加入桌面缩放及菜单点击修补 | **MeteorNOX；此 fork 的菜单修补由 OpenAI Codex 完成** |
 
-**本仓库新增的能力**（也就是我实际写的部分）：Electron 无边框透明窗口、鼠标穿透、窗口置顶、任意位置拖动、自定义音效目录、独立的「假 ctx」宿主服务、打包成 exe。
+**GoRmiTz 桌面版新增的能力**：Electron 无边框透明窗口、鼠标穿透、窗口置顶、任意位置拖动、自定义音效目录、独立的「假 ctx」宿主服务、打包成 exe。此 fork 的 Codex 与安装功能由 OpenAI Codex 参与开发，见文首 AI 声明。
 
 **本仓库没能做到的事**：原插件里的「每轮对话消耗统计」依赖 DSH 的会话事件流，离开 DSH 就没有数据源，这里默认关闭了。也就是说，**本仓库的功能是原项目的子集，不是超集**。想要完整的原版体验，请直接用原项目。
 
@@ -132,7 +132,7 @@ dist\WhaleWidget-win32-x64\
 - 拖动鲸鱼：会吸附到四边，拖到左边时整体水平镜像翻转
 - 大小和位置会记住（配置在 `data/`，位置在浏览器 localStorage）
 
-**默认大小是 0.6 倍（鲸鱼本体约 89px）**，在菜单里随时可调。原插件的最小档是 0.6，为了能选到 0.4 以下，vendored 副本里 `MIN_SCALE` 改成了 0.3（已加注释）——**这是本仓库对原作者代码的唯一一行改动**。
+**默认大小是 0.6 倍（鲸鱼本体约 89px）**，在菜单里随时可调。原插件的最小档是 0.6；桌面版将 vendored 副本里的 `MIN_SCALE` 改成了 0.3。本 fork 又修复了小尺寸时菜单图标部分区域点不开的问题。两处改动详见 `NOTICE`。
 
 ## 目录说明
 
@@ -170,7 +170,7 @@ DeepSeek-Balance-Whale-Widget-Desktop/
 | `ctx.on('session/event')` | DSH 会话事件流 | 空实现（每轮消耗统计已关闭） |
 | `ctx.effect(fn)` | cordis 生命周期 | 收集 disposer |
 
-所以移植成本就是这 5 个函数的壳子，插件本体零改动。升级插件时只覆盖 `vendor/dsh-whale-widget/` 下的 `lib/` 和 `assets/` 即可，然后记得重新改 `MIN_SCALE` 那一行。
+桌面宿主主要靠这 5 个接口适配。升级插件时请保留 `MIN_SCALE` 调整和菜单点击修补，具体位置见 `NOTICE`。
 
 ## 鼠标穿透是怎么做的
 
@@ -214,21 +214,22 @@ DeepSeek-Balance-Whale-Widget-Desktop/
 | 内容 | 作者 | 协议 | 位置 |
 |---|---|---|---|
 | 小鲸鱼形象、全部界面与交互、余额逻辑、峰谷定价、音效系统、随机台词 | **[MeteorNOX](https://github.com/MeteorNOX)** | MIT | `vendor/dsh-whale-widget/`（含原作者原版 LICENSE） |
-| 桌面壳：无边框透明窗口、鼠标穿透、置顶、自由拖动、自定义音效、独立宿主服务、exe 打包 | GoRmiTz（我） | MIT | `src/`、`server.mjs`、`index.html`、`package.json` |
+| 桌面壳：无边框透明窗口、鼠标穿透、置顶、自由拖动、自定义音效、独立宿主服务、exe 打包 | GoRmiTz | MIT | `src/`、`server.mjs`、`index.html`、`package.json` |
+| 此 fork 的 Codex 读取、中文界面、安装功能和菜单修补 | OpenAI Codex（AI），根据 RetaeFengs1078 的需求 | MIT | `src/`、`installer/` 等增改文件 |
 
 - 原项目主页：<https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget>
 - 原作者主页：<https://github.com/MeteorNOX>
 
-### 我对原作者代码做的全部改动
+### 对原作者代码的改动
 
-只有一行，为了让桌面挂件能做得更小：
+桌面版降低最小缩放值，让挂件能做得更小：
 
 ```js
 // vendor/dsh-whale-widget/lib/index.js
 var MIN_SCALE = 0.3   // 上游原值 0.6
 ```
 
-除此之外 `vendor/` 目录与上游 v0.2.10 逐字节一致。升级上游版本后需要重新改这一行，否则小于 0.5 的缩放会被判为非法而回退。
+本 fork 还让上游的点击拦截器放行菜单按钮、菜单和气泡，修复小鲸鱼尺寸下菜单图标只有顶部可点的问题。升级上游版本后需要重新应用这两处改动。
 
 ### 关于美术与音频素材
 
@@ -242,7 +243,7 @@ var MIN_SCALE = 0.3   // 上游原值 0.6
 
 ## 开源协议
 
-- **本仓库自有代码**：MIT，© 2026 GoRmiTz，见 [`LICENSE`](./LICENSE)
+- **桌面版代码与此 fork 的增改**：MIT；保留 GoRmiTz 的原有版权声明及 AI 开发记录，见 [`LICENSE`](./LICENSE)、[`NOTICE`](./NOTICE) 和 [`AI_DEVELOPMENT.md`](./AI_DEVELOPMENT.md)
 - **上游组件**：MIT，© 2026 MeteorNOX，见 [`vendor/dsh-whale-widget/LICENSE`](./vendor/dsh-whale-widget/LICENSE)（原样保留）
 
 完整的版权归属、改动声明、素材授权边界与第三方依赖清单，见 [`NOTICE`](./NOTICE)。

@@ -1195,6 +1195,9 @@ function onDocClickStopper(e) {
   // 只在鲸鱼命中区域拦截 click（保持透明区 pass-through）。
   // 持久注册（不随 endDrag 移除）——click 在 pointerup 之后派发，
   // 若在 endDrag 移除会导致 click 穿透到下方元素（如误打开文件）。
+  // 控件与鲸鱼不透明像素重叠时，也必须让控件收到自己的 click。
+  if (e.target && e.target.closest &&
+      e.target.closest('.dshwv-menu-btn, .dshwv-menu, .dshwv-bubble')) return
   if (!isWhaleHit(e)) return
   try { e.preventDefault(); e.stopPropagation() } catch (err) {}
 }
