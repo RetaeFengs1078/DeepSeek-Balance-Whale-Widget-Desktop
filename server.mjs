@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { CodexReader } from './src/codex-reader.mjs'
 import { CodexCompletionReader } from './src/codex-completions.mjs'
 import { RemoteCompletionReader } from './src/remote-completions.mjs'
+import { BrowserCompletionStore, isExtensionOrigin } from './src/browser-completions.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 
@@ -75,6 +76,7 @@ export async function startServer(opts = {}) {
   let fileCfg = loadConfig(dirs.configPath)
   const codexReader = new CodexReader()
   const completionReader = new CodexCompletionReader()
+  const browserCompletions = new BrowserCompletionStore()
   await completionReader.refresh() // 启动前的旧事件只作基线，不弹历史通知。
   const configuredHosts = fileCfg.CODEX_REMOTE_SSH_HOSTS ?? process.env.CODEX_REMOTE_SSH_HOSTS ?? ['gpu-5', 'gpu-7']
   const remoteHosts = Array.isArray(configuredHosts) ? configuredHosts : String(configuredHosts).split(',').map((host) => host.trim()).filter(Boolean)
@@ -278,6 +280,41 @@ export async function startServer(opts = {}) {
     try { pathname = new URL(req.url, 'http://localhost').pathname } catch (err) { pathname = '/' }
 
     if (pathname === '/favicon.ico') { res.writeHead(204); res.end(); return }
+    if (pathname === '/whale/browser-bridge' || pathname === '/whale/browser-completion') {
+      const origin = String(req.headers.origin || '')
+      if (!isExtensionOrigin(origin)) { send(res, 403, 'extension origin required'); return }
+      const headers = {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Whale-Bridge',
+        'Cache-Control': 'no-store',
+        'Vary': 'Origin',
+      }
+      if (req.method === 'OPTIONS') { res.writeHead(204, headers); res.end(); return }
+      if (pathname === '/whale/browser-bridge' && req.method === 'GET') {
+        res.writeHead(200, { ...headers, 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ ok: true, bridge: 'chatgpt-web' }))
+        return
+      }
+      if (pathname === '/whale/browser-completion' && req.method === 'POST' &&
+          req.headers['x-whale-bridge'] === '1' &&
+          String(req.headers['content-type'] || '').startsWith('application/json')) {
+        let body = ''
+        req.on('data', chunk => {
+          body += chunk
+          if (body.length > 2048) req.destroy()
+        })
+        req.on('end', () => {
+          let item = null
+          try { item = browserCompletions.add(JSON.parse(body)) } catch {}
+          res.writeHead(item ? 200 : 400, { ...headers, 'Content-Type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify({ ok: !!item }))
+        })
+        return
+      }
+      res.writeHead(405, headers); res.end()
+      return
+    }
     if (pathname === '/src/codex-ui.js') {
       try { send(res, 200, fs.readFileSync(path.join(dirs.root, 'src', 'codex-ui.js'), 'utf8'), 'text/javascript; charset=utf-8') }
       catch { send(res, 500, 'Codex 界面脚本读取失败') }
@@ -301,7 +338,7 @@ export async function startServer(opts = {}) {
       completionReader.refresh().then((local) => {
         const remote = { events: remoteReader.events, hosts: Object.fromEntries([...remoteReader.state].map(([host, state]) => [host, state.status])) }
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
-        res.end(JSON.stringify({ ok: true, events: [...local, ...remote.events].sort((a, b) => a.time - b.time).slice(-30), remoteHosts: remote.hosts }))
+        res.end(JSON.stringify({ ok: true, events: [...local, ...remote.events, ...browserCompletions.events].sort((a, b) => a.time - b.time).slice(-30), remoteHosts: remote.hosts }))
       }).catch(() => {
         res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
         res.end(JSON.stringify({ ok: false, events: [], remoteHosts: {} }))

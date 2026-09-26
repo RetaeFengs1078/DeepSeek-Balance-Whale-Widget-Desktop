@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { width: 245px; margin: 0; padding: 16px; color: #203170; background: #f7faff; font: 13px/1.5 "Microsoft YaHei", sans-serif; }
+    h1 { margin: 0 0 8px; font-size: 16px; }
+    p { margin: 8px 0; }
+    button { margin: 8px 8px 0 0; padding: 6px 9px; border: 1px solid #719bd3; border-radius: 7px; background: white; color: #203170; cursor: pointer; }
+    #status { min-height: 20px; color: #486a9d; }
+  </style>
+</head>
+<body>
+  <h1>小鲸鱼网页提醒</h1>
+  <p>监测已打开的 chatgpt.com 对话。回复结束时通知本机小鲸鱼。</p>
+  <p id="status">正在检查连接…</p>
+  <button id="check">检查连接</button><button id="test">测试提醒</button>
+  <script src="popup.js"></script>
+</body>
+</html>

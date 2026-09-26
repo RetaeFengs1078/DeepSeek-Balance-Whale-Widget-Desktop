@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "小鲸鱼 · ChatGPT 网页完成提醒",
+  "version": "0.5.0",
+  "description": "在 Chrome 或 Edge 的 ChatGPT 网页回复完成时，通知本机 Codex 额度小鲸鱼。",
+  "action": { "default_popup": "popup.html", "default_title": "小鲸鱼网页提醒" },
+  "background": { "service_worker": "background.js" },
+  "host_permissions": ["http://127.0.0.1/*"],
+  "content_scripts": [{
+    "matches": ["https://chatgpt.com/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}

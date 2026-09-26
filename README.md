@@ -18,7 +18,11 @@
 
 VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。本机 `config.json` 的 `CODEX_REMOTE_SSH_HOSTS` 默认为 `["gpu-5", "gpu-7"]`；换电脑时可改成自己的 SSH Host 别名。需要 SSH 免交互登录且远端有 `python3`；登录失败时会退避重试。远端会话标题和完成时间只返回本机小鲸鱼，不上传第三方。
 
-**网页端说明：**截至目前，[OpenAI 官方说明](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex)指出 ChatGPT 网页端的 Chat/Work 与桌面 Codex 是不同的任务体系，Codex 不在网页端提供；网页对话也不会生成本机 `~/.codex/sessions` 的 `task_complete`。开发者 API 的[完成 Webhook](https://developers.openai.com/api/docs/guides/webhooks)只适用于自己的 API 项目，不能无密钥读取现有 ChatGPT 网页对话。若要给**浏览器中打开的 ChatGPT 网页**做提示，需要另做 Chrome/Edge 浏览器扩展，在页面上观察回复结束，并通过仅限本机的接口通知鲸鱼；这依赖网页结构和打开的标签页，无法保证已关闭标签页或后台云端任务的完成通知。本版尚未集成该扩展，因此网页端不显示完成提醒。
+### Chrome 与 Edge 的 ChatGPT 网页提醒
+
+0.5.0 起提供 [浏览器扩展](browser-extension/README.md)，Chrome 和 Edge 可分别安装同一份扩展。扩展观察 `chatgpt.com` 中**你提交的新消息**，页面回复结束后把浏览器名称和对话标题交给本机鲸鱼，继续使用原有气泡和小黄鸭提示。扩展图标中可检查连接并发送测试提醒。桌面鲸鱼须先运行 0.5.0 或更新版本；无需 API Key。扩展仅请求 `chatgpt.com` 页面和 `127.0.0.1` 本机地址权限，不发送回复正文。
+
+这个提醒依据网页元素判断，网站改版可能需要更新扩展；关闭的标签页、其他设备和后台云端任务不保证收到。网页 ChatGPT 与本机 Codex 会话不是同一套日志：[OpenAI 官方说明](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex)将 Chat/Work 与桌面 Codex 区分开。开发者 API 的[完成 Webhook](https://developers.openai.com/api/docs/guides/webhooks)也不提供无密钥读取现有网页对话的能力。
 
 ### 视频播放兼容性
 
