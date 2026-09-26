@@ -40,6 +40,7 @@ Copyright (c) 2026 GoRmiTz
 2. 本仓库自有代码
 
    文件：index.html、server.mjs、src/main.js、src/preload.js、
+         src/codex-reader.mjs、src/codex-ui.js、
          package.json、start-desktop.bat、start-browser.bat、build-exe.bat
    版权：Copyright (c) 2026 GoRmiTz
    协议：MIT License，全文见 LICENSE

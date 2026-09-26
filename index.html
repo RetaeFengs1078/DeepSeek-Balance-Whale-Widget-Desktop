@@ -9,7 +9,7 @@
 <html lang="zh-CN" data-page-node-id="sKmvFUloxGsvbn8iDjpykl">
 <head data-page-node-id="2DIWtnxV7mScPlzXx3zqOC">
 <meta charset="utf-8" data-page-node-id="viWrbqA9XdA1EcaKxgD3gQ">
-<title>鲸鱼余额</title>
+<title>鲸鱼额度 · Codex</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'">
 <style>
   html, body {
@@ -36,14 +36,30 @@
   }
   /* 鲸鱼本体要能被鼠标命中（挂件默认是 pointer-events:none） */
   html.desktop .dshwv-img { pointer-events: auto; }
+  #codex-quota { position: fixed; z-index: 9998; width: 188px; box-sizing: border-box;
+    padding: 8px 10px; border: 1px solid rgba(68,117,176,.55); border-radius: 10px;
+    background: rgba(20,32,55,.91); color: #e2efff; font-size: 11px; line-height: 1.35;
+    box-shadow: 0 4px 15px rgba(0,0,0,.24); pointer-events: none; visibility: hidden;
+    user-select: none; }
+  .codex-title { font-size: 12px; font-weight: 700; margin-bottom: 3px; color: #a7d5ff; }
+  .codex-row { display: flex; justify-content: space-between; gap: 5px; white-space: nowrap; }
+  .codex-row strong { font-weight: 600; }
+  .codex-reset { color: #abc1da; text-align: right; margin-bottom: 3px; }
+  html.codex-only .err { display: none !important; }
+  html.codex-only .dshwv-text { visibility: hidden; }
+  .codex-bubble { display: none; position: absolute; left: 44%; top: 38%;
+    transform: translate(-50%,-50%); color: #536ba9; white-space: nowrap;
+    font-weight: 700; font-size: calc(var(--dshw-u) * 90); pointer-events: none; }
+  html.codex-only .dshwv-bubble-open .codex-bubble { display: block; }
+  html.codex-only .dshwv-left .codex-bubble { transform: translate(-50%,-50%) scaleX(-1); }
 </style>
 </head>
 <body data-page-node-id="CLmd4e5pwlCijQBp3glBQg">
   <div class="hint" data-page-node-id="tKUoroHLEdgricsMA0J1yR">
-    <b data-page-node-id="6DBhcXlDQHs8YfE13W04Of">DeepSeek 余额</b><br data-page-node-id="9flLEE0lAu43cJwlEcjzmU">
-    余额每 60 秒自动刷新<br data-page-node-id="Y3bWvCPsNP9OhceSEP25Zl">
+    <b data-page-node-id="6DBhcXlDQHs8YfE13W04Of">Codex 额度小鲸鱼</b><br data-page-node-id="9flLEE0lAu43cJwlEcjzmU">
+    每 60 秒自动读取本地会话<br data-page-node-id="Y3bWvCPsNP9OhceSEP25Zl">
     点鲸鱼：手动刷新 / 随机台词<br data-page-node-id="pkOJz3m5RpRq5T7xuDAjGB">
-    悬停右上角：菜单（大小·音效·用量）
+    悬停右上角：菜单（额度·大小·音效）
   </div>
   <div class="err" id="err" data-page-node-id="V5ZKJfi3OCAJEdhVrs65pS">
     还没有读到 API Key。<br data-page-node-id="EAMSpJyFxhUkHc9FYgQOdO">
@@ -88,12 +104,7 @@
       }
     }
   </script>
-  <script>
-    fetch('/dsh-whale/balance.json', { cache: 'no-store' })
-      .then(function (r) { return r.json() })
-      .then(function (d) { if (d && d.code === 'NO_KEY') document.getElementById('err').style.display = 'block' })
-      .catch(function () {})
-  </script>
+  <script src="/src/codex-ui.js" defer></script>
   <script>
     // 桌面模式：把鲸鱼的位置告诉主进程，由主进程判断光标是否命中（透明区鼠标穿透）。
     // 只在位置真的变了才上报，静止时零开销。

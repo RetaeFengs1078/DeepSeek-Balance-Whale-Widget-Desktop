@@ -24,6 +24,6 @@ echo.
 echo [whale] done:
 echo   dist\WhaleWidget-win32-x64\WhaleWidget.exe
 echo.
-echo Move config.json next to the exe and fill in DEEPSEEK_API_KEY.
+echo Codex mode reads local sessions automatically. DeepSeek Key is optional.
 pause
 endlocal

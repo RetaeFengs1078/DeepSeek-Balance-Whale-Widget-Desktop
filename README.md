@@ -4,6 +4,14 @@
 
 # 鲸鱼余额 · 桌面透明挂件
 
+## Codex 原生额度版
+
+现在无需 DeepSeek Harness、Codex 桌面端或 OpenAI API Key，即可直接运行 Windows 小鲸鱼。程序只读 `%USERPROFILE%\.codex\sessions`；如果设置了 `CODEX_HOME`，则从该目录的 `sessions` 读取，并兼容 `archived_sessions`。它从 `rollout-*.jsonl` 中挑选最新的有效 `rate_limits` 快照，按 `window_minutes` 区分 5 小时（300）和每周（10080）额度。只出现一个窗口时只显示该窗口。额度卡片显示已用、剩余百分比和本地时间的重置时刻。
+
+首次运行直接双击 `WhaleWidget.exe` 即可，不必填写 `config.json`。鲸鱼每 60 秒自动刷新；点击鲸鱼、挂件菜单中的「Codex 额度 → 立即刷新」也可手动刷新。没有 DeepSeek Key 时，鲸鱼自动进入 Codex 模式；如果填写了 DeepSeek Key，原有的余额功能继续可用，同时显示 Codex 额度卡片。托盘、拖动、置顶、动画与音效功能沿用原桌面版。
+
+源码验证：`node --test test/*.test.mjs`。打包：`npm install` 后运行 `npm run dist`，成品位于 `dist/WhaleWidget-win32-x64/`，分发时须保留整个文件夹。无需上传或修改 Codex 会话文件。
+
 > 把只能在 DeepSeek Harness 里用的「小鲸鱼余额挂件」，搬出来变成一个**无边框、背景透明、只显示小鲸鱼**的 Windows 桌面悬浮窗。
 >
 > **English:** A standalone Windows desktop version of the DeepSeek balance whale widget — frameless, transparent, click-through window that shows only the whale, packable as a single `.exe`.
@@ -31,7 +39,11 @@
 
 ## 快速开始
 
-**第一步：填 Key**
+**第一步：运行 Codex 模式**
+
+不需要 Key。直接双击 `start-desktop.bat` 即可。已安装并运行过 Codex CLI 或 Codex 应用、会话日志含额度快照时，小鲸鱼自动显示额度。
+
+**可选：继续使用 DeepSeek 余额功能**
 
 把 `config.example.json` 复制一份改名为 `config.json`，然后把 `DEEPSEEK_API_KEY` 填进去（DeepSeek 开放平台创建的 `sk-` 开头密钥）：
 
@@ -58,7 +70,7 @@ dist\WhaleWidget-win32-x64\
 
 里面的 `WhaleWidget.exe` 就是成品（约 246MB，整个文件夹约 370MB）。**要运行必须整个文件夹一起保留**，不能只拷 exe。
 
-打包后 **`config.json` 要放在 exe 同目录**（首次运行会自动生成一个空的）。`data/` 也一样会生成在 exe 旁边。
+打包后首次运行会在 exe 同目录自动生成可选的 `config.json` 和 `data/`。
 
 > 未签名的 Electron 程序可能被 Windows 安全中心误报。如果 exe 打不开或提示已隔离：
 > Windows 安全中心 → 病毒和威胁防护 → 保护历史记录 → 还原，或把该文件夹加进排除项。

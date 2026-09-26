@@ -7,6 +7,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test test/*.test.mjs",
     "dist": "electron-packager . WhaleWidget --platform=win32 --arch=x64 --out=dist --asar --overwrite --ignore=^/node_modules --ignore=^/dist --ignore=^/chrome-profile --ignore=^/NVIDIA --ignore=^/config\\.json$ --ignore=^/config\\.local\\.json$ --ignore=^/data --ignore=^/sounds"
   },
   "devDependencies": {

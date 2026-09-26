@@ -8,6 +8,7 @@ import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CodexReader } from './src/codex-reader.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 
@@ -69,6 +70,7 @@ export async function startServer(opts = {}) {
     } catch (err) { /* 忽略 */ }
   }
   let fileCfg = loadConfig(dirs.configPath)
+  const codexReader = new CodexReader()
   const reloadConfig = () => { fileCfg = loadConfig(dirs.configPath) }
 
   // 凭据：环境变量优先，其次 config.json（只在本机，不上传）。
@@ -264,6 +266,30 @@ export async function startServer(opts = {}) {
     try { pathname = new URL(req.url, 'http://localhost').pathname } catch (err) { pathname = '/' }
 
     if (pathname === '/favicon.ico') { res.writeHead(204); res.end(); return }
+    if (pathname === '/src/codex-ui.js') {
+      try { send(res, 200, fs.readFileSync(path.join(dirs.root, 'src', 'codex-ui.js'), 'utf8'), 'text/javascript; charset=utf-8') }
+      catch { send(res, 500, 'Codex 界面脚本读取失败') }
+      return
+    }
+
+    if (pathname === '/whale/codex.json') {
+      if (req.method !== 'GET') { send(res, 405, 'method not allowed'); return }
+      codexReader.refresh().then((snapshot) => {
+        res.writeHead(200, JSON_HEADERS)
+        res.end(JSON.stringify(snapshot))
+      }).catch((err) => {
+        res.writeHead(500, JSON_HEADERS)
+        res.end(JSON.stringify({ ok: false, message: '读取 Codex 日志失败：' + err.message }))
+      })
+      return
+    }
+
+    // 没有 DeepSeek Key 时仍让原鲸鱼正常绘制与动画；额度由独立 Codex 面板显示。
+    if (pathname === '/dsh-whale/balance.json' && !credential('DEEPSEEK_API_KEY')) {
+      res.writeHead(200, JSON_HEADERS)
+      res.end(JSON.stringify({ ok: true, totalBalance: 0, currency: 'CNY', todayUsage: null, isPeak: false }))
+      return
+    }
 
     // 挂件设置里填 API Key 用
     if (pathname === '/dsh-whale/config') { handleConfig(req, res); return }
@@ -331,7 +357,7 @@ export async function startServer(opts = {}) {
   console.log('[whale] http://' + host + ':' + port + '/')
   console.log('[whale] 数据目录: ' + dirs.dataDir)
   console.log('[whale] 配置文件: ' + dirs.configPath)
-  console.log('[whale] DEEPSEEK_API_KEY: ' + (credential('DEEPSEEK_API_KEY') ? '已配置' : '未配置（请在 config.json 填写）'))
+  console.log('[whale] DeepSeek 功能: ' + (credential('DEEPSEEK_API_KEY') ? '已启用' : '未启用（Codex 模式无需密钥）'))
 
   function shutdown() {
     for (const c of cleanups) { try { c() } catch (err) {} }

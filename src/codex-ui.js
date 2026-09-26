@@ -1,0 +1,110 @@
+// Codex 信息层与上游鲸鱼脚本解耦。鲸鱼 DOM 只用于定位和扩展菜单。
+;(function () {
+  'use strict'
+  var panel = document.createElement('div')
+  panel.id = 'codex-quota'
+  panel.setAttribute('aria-live', 'polite')
+  panel.innerHTML = '<div class="codex-title">Codex 额度</div><div class="codex-content">正在读取本地会话…</div>'
+  document.body.appendChild(panel)
+
+  function pct(value) { return Number(value).toFixed(Number.isInteger(value) ? 0 : 1) + '%' }
+  function resetTime(value) {
+    if (!value) return '重置时间未知'
+    var date = new Date(value)
+    if (!Number.isFinite(date.getTime())) return '重置时间未知'
+    return '重置 ' + new Intl.DateTimeFormat('zh-CN', {
+      month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(date)
+  }
+  function row(label, item) {
+    if (!item) return ''
+    return '<div class="codex-row"><span>' + label + '</span><strong>已用 ' + pct(item.usedPercent) +
+      ' · 剩余 ' + pct(item.remainingPercent) + '</strong></div><div class="codex-reset">' + resetTime(item.resetAt) + '</div>'
+  }
+  var latest = null
+  var hasDeepSeekKey = false
+  var busy = false
+  function paint(data) {
+    var content = panel.querySelector('.codex-content')
+    if (!content) return
+    if (!data || !data.ok) { content.textContent = data && data.message || '读取 Codex 额度失败'; return }
+    var windows = data.windows || {}
+    if (!windows.fiveHour && !windows.weekly) { content.textContent = data.message || '尚无额度快照'; return }
+    content.innerHTML = row('5 小时', windows.fiveHour) + row('每周', windows.weekly)
+    var bubble = document.querySelector('.codex-bubble')
+    if (bubble) {
+      var summary = windows.fiveHour || windows.weekly
+      bubble.textContent = (windows.fiveHour ? '5 小时' : '每周') + '剩余 ' + pct(summary.remainingPercent)
+    }
+  }
+  function refresh() {
+    if (busy) return
+    busy = true
+    fetch('/whale/codex.json', { cache: 'no-store' })
+      .then(function (response) { return response.json() })
+      .then(function (data) { latest = data; paint(data) })
+      .catch(function () { paint({ ok: false, message: '读取 Codex 额度失败' }) })
+      .finally(function () { busy = false })
+  }
+  window.whaleRefreshCodex = refresh
+
+  fetch('/dsh-whale/config', { cache: 'no-store' })
+    .then(function (response) { return response.json() })
+    .then(function (data) {
+      hasDeepSeekKey = !!data.hasKey
+      if (!hasDeepSeekKey) document.documentElement.classList.add('codex-only')
+    }).catch(function () { document.documentElement.classList.add('codex-only') })
+
+  function position() {
+    var image = document.querySelector('.dshwv-img')
+    if (!image) return
+    var bubbleBox = document.querySelector('.dshwv-bubble')
+    if (bubbleBox && !bubbleBox.querySelector('.codex-bubble')) {
+      var bubbleText = document.createElement('div')
+      bubbleText.className = 'codex-bubble'
+      bubbleText.textContent = 'Codex 额度'
+      bubbleBox.appendChild(bubbleText)
+      if (latest) paint(latest)
+    }
+    var rect = image.getBoundingClientRect()
+    if (rect.width <= 0) return
+    var width = panel.offsetWidth
+    var height = panel.offsetHeight
+    panel.style.left = Math.round(Math.max(8, Math.min(innerWidth - width - 8, rect.left + rect.width / 2 - width / 2))) + 'px'
+    var above = rect.top - height - 8
+    panel.style.top = Math.round(above >= 8 ? above : Math.min(innerHeight - height - 8, rect.bottom + 8)) + 'px'
+    panel.style.visibility = 'visible'
+  }
+  setInterval(position, 300)
+  window.addEventListener('resize', position)
+
+  // 点击鲸鱼原有的手动刷新同时刷新 Codex；菜单里另有明确的刷新入口。
+  document.addEventListener('click', function (event) {
+    if (event.target && event.target.closest && event.target.closest('.dshwv-img')) refresh()
+  }, true)
+  var attempts = 0
+  var menuTimer = setInterval(function () {
+    var menu = document.querySelector('.dshwv-menu')
+    if (!menu && ++attempts < 100) return
+    clearInterval(menuTimer)
+    if (!menu) return
+    var separator = document.createElement('div')
+    separator.className = 'dshwv-menu-sep codex-ext'
+    var rowElement = document.createElement('div')
+    rowElement.className = 'dshwv-menu-row codex-ext'
+    var label = document.createElement('span')
+    label.textContent = 'Codex 额度'
+    var button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'dshwv-sound'
+    button.textContent = '立即刷新'
+    button.addEventListener('click', function (event) { event.stopPropagation(); refresh() })
+    rowElement.appendChild(label)
+    rowElement.appendChild(button)
+    menu.appendChild(separator)
+    menu.appendChild(rowElement)
+  }, 300)
+
+  refresh()
+  setInterval(refresh, 60000)
+})()
