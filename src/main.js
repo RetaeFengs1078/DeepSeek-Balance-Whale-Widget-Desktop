@@ -11,6 +11,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { spawn, spawnSync } = require('node:child_process')
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage } = require('electron')
+const { windowShape } = require('./window-shape.js')
 
 const APP_ROOT = path.join(__dirname, '..')
 
@@ -24,6 +25,27 @@ let pageUrl = ''
 let whaleRect = null
 let forceInteractive = false
 let winPos = [0, 0]
+let lastShapeKey = ''
+let focusable = false
+
+function syncFocusable(menuOpen) {
+  if (process.platform !== 'win32' || !win || win.isDestroyed()) return
+  const next = !!menuOpen
+  if (next === focusable) return
+  try { win.setFocusable(next); focusable = next }
+  catch (err) { console.error('[whale] 焦点模式切换失败:', err) }
+}
+
+function applyWindowShape(regions, dragging) {
+  if (process.platform !== 'win32' || !win || win.isDestroyed() || typeof win.setShape !== 'function') return
+  const [width, height] = win.getSize()
+  const rects = windowShape(regions, width, height, dragging)
+  if (!rects.length) return
+  const key = JSON.stringify(rects)
+  if (key === lastShapeKey) return
+  try { win.setShape(rects); lastShapeKey = key }
+  catch (err) { console.error('[whale] 窗口区域更新失败:', err) }
+}
 
 // 桌面端自己的设置（跟插件的尺寸配置分开存，互不覆盖）
 //   alwaysOnTop —— 窗口置顶
@@ -36,12 +58,13 @@ let settingsPath = null
 let soundsDirPath = ''
 let trayRef = null
 
-// Electron 在 Windows 上切换 setIgnoreMouseEvents 会丢掉 TOPMOST 样式，
-// 所以每次切换后、以及定时/失焦时都要重新断言一次置顶。
-function applyTop() {
+// Electron 在 Windows 上切换 setIgnoreMouseEvents 偶尔会丢掉 TOPMOST 样式。
+// 仅重申置顶属性，不调用 moveTop：强制重排整屏窗口会干扰视频表面。
+function applyTop(force = false) {
   if (!win || win.isDestroyed()) return
-  win.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver')
-  if (settings.alwaysOnTop) win.moveTop()
+  if (force || win.isAlwaysOnTop() !== settings.alwaysOnTop) {
+    win.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver')
+  }
 }
 
 function loadSettings() {
@@ -177,6 +200,7 @@ function createWindow() {
     fullscreenable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    focusable: false,
     show: false,
     // 注意：不能设 paintWhenInitiallyHidden:false —— 那样窗口显示前不绘制，
     // 而 ready-to-show 又要等首帧绘制，两者会互相死锁导致窗口永远不出现。
@@ -190,11 +214,11 @@ function createWindow() {
   })
 
   interactive = false
+  lastShapeKey = ''
+  focusable = false
   // 不转发鼠标事件：透明区完全不吃事件，空闲时渲染进程零唤醒
   win.setIgnoreMouseEvents(true)
-  applyTop()
-
-  win.on('blur', () => { if (settings.alwaysOnTop && win && !win.isDestroyed()) win.moveTop() })
+  applyTop(true)
 
   // 排查时开 WHALE_LOG_RENDERER=1 可把页面 console 打到终端
   if (process.env.WHALE_LOG_RENDERER === '1') {
@@ -225,6 +249,10 @@ function createWindow() {
     const b = screenBounds()
     win.setBounds(b)
     winPos = [b.x, b.y]
+    // 新显示器布局下旧区域坐标可能失效；下一次页面上报会重新裁剪。
+    if (process.platform === 'win32' && typeof win.setShape === 'function') {
+      try { win.setShape([]); lastShapeKey = '' } catch {}
+    }
   }
   screen.on('display-metrics-changed', refit)
   screen.on('display-added', refit)
@@ -271,6 +299,8 @@ ipcMain.on('whale:state', (_event, state) => {
     }
   }
   forceInteractive = !!state.force
+  syncFocusable(!!state.menuOpen)
+  applyWindowShape(state.regions, !!state.dragging)
   syncInteractive()
 })
 
@@ -278,7 +308,7 @@ ipcMain.handle('whale:settings', () => currentSettings())
 
 ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (!patch || typeof patch !== 'object') return currentSettings()
-  if (typeof patch.alwaysOnTop === 'boolean') { settings.alwaysOnTop = patch.alwaysOnTop; applyTop() }
+  if (typeof patch.alwaysOnTop === 'boolean') { settings.alwaysOnTop = patch.alwaysOnTop; applyTop(true) }
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
   if (typeof patch.autoStart === 'boolean') {
@@ -320,7 +350,7 @@ function buildTrayMenu() {
       click: () => {
         settings.alwaysOnTop = !settings.alwaysOnTop
         saveSettings()
-        applyTop()
+        applyTop(true)
         buildTrayMenu()
       },
     },
@@ -380,7 +410,7 @@ app.whenReady().then(async () => {
 
   // 60ms 轮询光标：比转发每次 mousemove 便宜一个数量级，体感延迟可忽略
   setInterval(syncInteractive, 60)
-  // 10s 兜底重申置顶：某些程序（全屏应用、UAC 提示）起来后会把层级抢走
+  // 10s 兜底重申置顶，不强制改变浏览器焦点或窗口顺序。
   setInterval(applyTop, 10000)
 })
 

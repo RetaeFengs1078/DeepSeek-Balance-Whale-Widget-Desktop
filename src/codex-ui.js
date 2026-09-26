@@ -64,8 +64,10 @@
     completion.querySelector('.codex-completion-title').textContent = event.conversation
     completion.hidden = false
     position()
+    if (window.whaleReportState) window.whaleReportState()
     setTimeout(function () {
       completion.hidden = true
+      if (window.whaleReportState) window.whaleReportState()
       showingCompletion = false
       setTimeout(showNextCompletion, 200)
     }, 8500)
@@ -149,6 +151,7 @@
     var above = rect.top - height - 8
     panel.style.top = Math.round(above >= 8 ? above : Math.min(innerHeight - height - 8, rect.bottom + 8)) + 'px'
     panel.style.visibility = 'visible'
+    if (window.whaleReportState) window.whaleReportState()
   }
   setInterval(position, 300)
   window.addEventListener('resize', position)

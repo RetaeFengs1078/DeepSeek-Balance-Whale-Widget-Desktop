@@ -18,6 +18,10 @@
 
 VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。本机 `config.json` 的 `CODEX_REMOTE_SSH_HOSTS` 默认为 `["gpu-5", "gpu-7"]`；换电脑时可改成自己的 SSH Host 别名。需要 SSH 免交互登录且远端有 `python3`；登录失败时会退避重试。远端会话标题和完成时间只返回本机小鲸鱼，不上传第三方。**ChatGPT/Codex 网页端目前没有稳定的本地会话完成事件可读**，此版本尚不能保证网页任务提醒。
 
+### 视频播放兼容性
+
+0.4.1 起，Windows 桌面窗口在系统层面只保留鲸鱼、菜单和提示所在的绘制区域；平时点击鲸鱼也不会抢浏览器焦点。拖动鲸鱼时暂时扩展活动区域，松开后恢复，以避免透明整屏置顶窗口影响 B 站等网页视频的画面。菜单打开时仍可输入 API Key。
+
 鲸鱼上方的常显额度面板现在默认关闭。点击鲸鱼仍可看到额度气泡；若要恢复常显面板，可在鲸鱼菜单或托盘菜单中勾选「常显额度面板」。
 
 现在无需 DeepSeek Harness、Codex 桌面端或 OpenAI API Key，即可直接运行 Windows 小鲸鱼。程序只读 `%USERPROFILE%\.codex\sessions`；如果设置了 `CODEX_HOME`，则从该目录的 `sessions` 读取，并兼容 `archived_sessions`。它从 `rollout-*.jsonl` 中挑选最新的有效 `rate_limits` 快照，按 `window_minutes` 区分 5 小时（300）和每周（10080）额度。只出现一个窗口时只显示该窗口。开启常显卡片后会显示已用、剩余百分比和本地时间的重置时刻。
