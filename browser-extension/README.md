@@ -2,16 +2,18 @@
 
 同一份 Manifest V3 扩展可分别安装到 **Google Chrome** 和 **Microsoft Edge**。扩展只在 `https://chatgpt.com/` 的已打开标签页工作；小鲸鱼桌面程序须为 **0.5.1 或更新版本**并保持运行。扩展 0.5.2 加入生成状态识别和弹窗诊断。无需 OpenAI API Key、DeepSeek Harness 或 Codex 客户端。
 
+**便携包下载**：[GitHub Releases · 扩展 0.5.2](https://github.com/RetaeFengs1078/DeepSeek-Balance-Whale-Widget-Desktop/releases/tag/browser-extension-v0.5.2)。Chrome 和 Edge 包内的扩展相同，文件名区分安装说明；浏览器要求先解压，再通过扩展管理页加载包含 `manifest.json` 的文件夹。
+
 ## 安装 Chrome
 
-1. 解压 `小鲸鱼-Chrome-扩展.zip`，保留解压后的文件夹，不要只拿出单个文件。
+1. 解压 `小鲸鱼-Chrome-扩展-0.5.2.zip`，保留解压后的文件夹，不要只拿出单个文件。
 2. 打开 `chrome://extensions`，开启「开发者模式」，点「加载已解压的扩展程序」。
 3. 选择包含 `manifest.json` 的文件夹，安装后刷新已打开的 ChatGPT 网页。
 4. 点击工具栏中的「小鲸鱼 · ChatGPT 网页完成提醒」→「检查连接」；可点「测试提醒」确认鲸鱼气泡和声音。
 
 ## 安装 Edge
 
-1. 解压 `小鲸鱼-Edge-扩展.zip`。
+1. 解压 `小鲸鱼-Edge-扩展-0.5.2.zip`。
 2. 打开 `edge://extensions`，开启「开发人员模式」，点「加载解压缩的扩展」。
 3. 选择包含 `manifest.json` 的文件夹，安装后刷新已打开的 ChatGPT 网页。
 4. 点击扩展图标，检查连接并发送测试提醒。
