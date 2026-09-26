@@ -14,9 +14,9 @@
 
 ### Codex 对话完成提醒
 
-小鲸鱼每 3 秒检查本机 Codex 会话日志中的 `task_complete`，完成时在鲸鱼上方显示来源与对话标题。支持本机 **Codex 客户端**、**VS Code Codex 插件**及命令行；过滤后台子任务，启动时不补弹旧提醒。对话标题优先取本机 Codex 数据库，读不到时显示首条提问或「未命名对话」。不读取聊天正文用于网络传输。
+小鲸鱼每 3 秒检查本机 Codex 会话日志中的 `task_complete`，完成时在鲸鱼上方显示来源与对话标题。支持本机 **Codex 客户端**、**VS Code Codex 插件**及命令行；过滤后台子任务，启动时不补弹旧提醒。0.4.3 修复了完成时间为 Unix 秒数时提醒被丢弃的问题，本机桌面端与 VS Code 的现有日志均已验证。对话标题优先取本机 Codex 数据库，读不到时显示首条提问或「未命名对话」。不读取聊天正文用于网络传输。
 
-VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。本机 `config.json` 的 `CODEX_REMOTE_SSH_HOSTS` 默认为 `["gpu-5", "gpu-7"]`；换电脑时可改成自己的 SSH Host 别名。需要 SSH 免交互登录且远端有 `python3`；登录失败时会退避重试。远端会话标题和完成时间只返回本机小鲸鱼，不上传第三方。**ChatGPT/Codex 网页端目前没有稳定的本地会话完成事件可读**，此版本尚不能保证网页任务提醒。
+VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。本机 `config.json` 的 `CODEX_REMOTE_SSH_HOSTS` 默认为 `["gpu-5", "gpu-7"]`；换电脑时可改成自己的 SSH Host 别名。需要 SSH 免交互登录且远端有 `python3`；登录失败时会退避重试。远端会话标题和完成时间只返回本机小鲸鱼，不上传第三方。**ChatGPT/Codex 网页端目前没有稳定的本地会话完成事件可读**。OpenAI 官方的[完成 Webhook](https://developers.openai.com/api/docs/guides/webhooks)属于开发者 API 项目，并不提供现有网页对话的无密钥通知；此版本不声称支持网页任务提醒。
 
 ### 视频播放兼容性
 

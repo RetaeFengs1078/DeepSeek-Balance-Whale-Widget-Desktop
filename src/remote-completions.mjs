@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process'
 import { sourceLabel, cleanTitle } from './codex-completions.mjs'
 
-const REMOTE_SCRIPT = String.raw`
+export const REMOTE_SCRIPT = String.raw`
 import json, os, pathlib, sqlite3, sys, time
 since = int(sys.argv[1])
 home = pathlib.Path(os.environ.get('CODEX_HOME') or (pathlib.Path.home() / '.codex'))
@@ -63,7 +63,11 @@ if root.exists():
                                 continue
                             from datetime import datetime
                             stamp = payload.get('completed_at') or record.get('timestamp')
-                            moment = int(datetime.fromisoformat(stamp.replace('Z', '+00:00')).timestamp() * 1000)
+                            if isinstance(stamp, (int, float)) or (isinstance(stamp, str) and stamp.isnumeric()):
+                                stamp = float(stamp)
+                                moment = int(stamp if stamp >= 1e12 else stamp * 1000)
+                            else:
+                                moment = int(datetime.fromisoformat(stamp.replace('Z', '+00:00')).timestamp() * 1000)
                             if moment >= since:
                                 events.append({'id': str(meta.get('id', '')) + ':' + str(payload.get('turn_id') or moment), 'time': moment, 'originator': meta.get('originator'), 'conversation': title})
                         except Exception:

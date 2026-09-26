@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { CodexCompletionReader, completionFromLine, sourceLabel } from '../src/codex-completions.mjs'
+import { CodexCompletionReader, completionFromLine, completionTime, sourceLabel } from '../src/codex-completions.mjs'
 
 function record(type, payload, timestamp = '2026-09-26T08:00:00.000Z') {
   return JSON.stringify({ timestamp, type, payload }) + '\n'
@@ -20,6 +20,19 @@ test('只识别用户会话的完成事件', () => {
   assert.equal(completionFromLine(line, { id: 'session-1', thread_source: 'user' }, '演示')?.conversation, '演示')
   assert.equal(completionFromLine(line, { id: 'session-1', thread_source: 'subagent' }), null)
   assert.equal(completionFromLine(line, { id: 'session-1', source: { subagent: {} } }), null)
+})
+
+test('兼容桌面端和 VS Code 实际日志中的 Unix 秒数完成时间', () => {
+  const completedAt = 1790411566
+  assert.equal(completionTime(completedAt), 1790411566000)
+  assert.equal(completionTime(String(completedAt)), 1790411566000)
+  assert.equal(completionTime(1790411566000), 1790411566000)
+  for (const originator of ['codex_work_desktop', 'codex_vscode']) {
+    const line = record('event_msg', { type: 'task_complete', turn_id: 'turn-1', completed_at: completedAt })
+    const event = completionFromLine(line, { id: 'session-1', originator, thread_source: 'user' }, '示例任务')
+    assert.equal(event?.time, 1790411566000)
+    assert.equal(event?.source, originator === 'codex_vscode' ? 'VS Code Codex' : 'Codex 客户端')
+  }
 })
 
 test('启动时忽略历史，追加完成事件后仅提示一次', async () => {

@@ -23,13 +23,24 @@ export function completionFromLine(line, meta, title = '') {
   if (record?.type !== 'event_msg' || record.payload?.type !== 'task_complete') return null
   if (meta?.thread_source && meta.thread_source !== 'user') return null
   if (meta?.source && typeof meta.source === 'object') return null
-  const time = Date.parse(record.payload.completed_at || record.timestamp)
+  const time = completionTime(record.payload.completed_at) ?? completionTime(record.timestamp)
   if (!Number.isFinite(time)) return null
   const conversation = cleanTitle(title) || '未命名对话'
   return {
     id: `${meta?.id || meta?.session_id || ''}:${record.payload.turn_id || time}`,
     time, source: sourceLabel(meta), conversation,
   }
+}
+
+export function completionTime(raw) {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw < 1e12 ? raw * 1000 : raw
+  if (typeof raw === 'string') {
+    const text = raw.trim()
+    if (/^\d+(?:\.\d+)?$/.test(text)) return completionTime(Number(text))
+    const parsed = Date.parse(text)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return null
 }
 
 export function cleanTitle(value) {
