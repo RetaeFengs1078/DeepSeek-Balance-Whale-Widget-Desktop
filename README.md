@@ -1,5 +1,7 @@
 > **来源声明 / Attribution**：小鲸鱼本体来自 **MeteorNOX** 的 [DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget)（MIT 协议）；独立 Electron 桌面版来自 **GoRmiTz**。此分支增加原生 Codex 额度读取、中文额度界面和 Windows 安装功能。保留原作者许可及署名。本项目是非官方衍生版本。
 
+> **AI 开发声明**：本 fork 的 Codex 额度读取、中文额度界面、Windows 安装及开机自启等新增功能，主要由 **OpenAI Codex（AI）** 按 RetaeFengs1078 的需求编写、构建和测试；本次气泡动画修复也由 Codex 完成。原鲸鱼插件与桌面版的作者分别是 MeteorNOX 和 GoRmiTz，不能将他们的作品归为 AI 创作。详见 [AI 开发说明](AI_DEVELOPMENT.md)。
+
 ---
 
 # 鲸鱼余额 · 桌面透明挂件
@@ -28,7 +30,7 @@
 |---|---|---|
 | **原项目**<br>DeepSeek-Balance-Whale-Widget | DeepSeek Harness 网页界面右下角的余额挂件插件 | **MeteorNOX** |
 | **桌面版来源**<br>DeepSeek-Balance-Whale-Widget-Desktop | 套在原项目外面的桌面壳，让它能独立运行 | **GoRmiTz** |
-| **此分支** | 原生读取 Codex 额度、中文额度界面、Windows 安装及自启 | **RetaeFengs1078** |
+| **此分支** | 原生读取 Codex 额度、中文额度界面、Windows 安装及自启 | **OpenAI Codex（AI）参与开发；RetaeFengs1078 提出需求并维护 fork** |
 | **原版本体** | 本仓库里 `vendor/dsh-whale-widget/` 就是原版插件，仅改动 1 行 | **MeteorNOX** |
 
 **本仓库新增的能力**（也就是我实际写的部分）：Electron 无边框透明窗口、鼠标穿透、窗口置顶、任意位置拖动、自定义音效目录、独立的「假 ctx」宿主服务、打包成 exe。

@@ -48,10 +48,13 @@
   .codex-reset { color: #abc1da; text-align: right; margin-bottom: 3px; }
   html.codex-only .err { display: none !important; }
   html.codex-only .dshwv-text { visibility: hidden; }
-  .codex-bubble { display: none; position: absolute; left: 44%; top: 38%;
+  .codex-bubble { position: absolute; left: 44%; top: 38%;
     transform: translate(-50%,-50%); color: #536ba9; white-space: nowrap;
-    font-weight: 700; font-size: calc(var(--dshw-u) * 90); pointer-events: none; }
-  html.codex-only .dshwv-bubble-open .codex-bubble { display: block; }
+    font-weight: 700; font-size: calc(var(--dshw-u) * 90); pointer-events: none;
+    opacity: 0; transition: opacity .16s ease; }
+  html.codex-only .dshwv-bubble-open .codex-bubble {
+    opacity: 1; transition: opacity .16s ease .36s;
+  }
   html.codex-only .dshwv-left .codex-bubble { transform: translate(-50%,-50%) scaleX(-1); }
 </style>
 </head>
