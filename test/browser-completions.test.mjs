@@ -30,6 +30,15 @@ test('扩展事件进入鲸鱼原有完成提醒队列', async () => {
     server = await startServer({ configPath, dataDir: path.join(fixture, 'data'), port: 8896 })
     const base = 'http://127.0.0.1:' + server.port
     const origin = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop'
+    const ping = await (await fetch(base + '/whale/browser-bridge')).json()
+    assert.equal(ping.bridge, 'chatgpt-web')
+    const foreignPing = await fetch(base + '/whale/browser-bridge', { headers: { Origin: 'https://chatgpt.com' } })
+    assert.equal(foreignPing.status, 403)
+    const originlessPost = await fetch(base + '/whale/browser-completion', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Whale-Bridge': '1' },
+      body: JSON.stringify({ id: 'originless-event', browser: 'Chrome', conversation: '伪造' }),
+    })
+    assert.equal(originlessPost.status, 403)
     const denied = await fetch(base + '/whale/browser-completion', {
       method: 'POST', headers: { Origin: 'https://chatgpt.com', 'Content-Type': 'application/json', 'X-Whale-Bridge': '1' },
       body: JSON.stringify({ id: 'denied-event', browser: 'Chrome', conversation: '伪造' }),

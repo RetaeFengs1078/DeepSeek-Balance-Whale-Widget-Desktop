@@ -1,6 +1,6 @@
 # 小鲸鱼 ChatGPT 网页提醒扩展
 
-同一份 Manifest V3 扩展可分别安装到 **Google Chrome** 和 **Microsoft Edge**。扩展只在 `https://chatgpt.com/` 的已打开标签页工作；小鲸鱼桌面程序须为 **0.5.0 或更新版本**并保持运行。无需 OpenAI API Key、DeepSeek Harness 或 Codex 客户端。
+同一份 Manifest V3 扩展可分别安装到 **Google Chrome** 和 **Microsoft Edge**。扩展只在 `https://chatgpt.com/` 的已打开标签页工作；小鲸鱼桌面程序须为 **0.5.1 或更新版本**并保持运行（0.5.1 修复 Edge 的连接状态误报）。无需 OpenAI API Key、DeepSeek Harness 或 Codex 客户端。
 
 ## 安装 Chrome
 

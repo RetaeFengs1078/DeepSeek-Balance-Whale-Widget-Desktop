@@ -282,6 +282,13 @@ export async function startServer(opts = {}) {
     if (pathname === '/favicon.ico') { res.writeHead(204); res.end(); return }
     if (pathname === '/whale/browser-bridge' || pathname === '/whale/browser-completion') {
       const origin = String(req.headers.origin || '')
+      // Chromium 扩展对已授权的本机地址发简单 GET 时可能省略 Origin。
+      // 此路由只返回连接状态；写入完成事件仍必须验证扩展来源。
+      if (pathname === '/whale/browser-bridge' && req.method === 'GET' && !origin) {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+        res.end(JSON.stringify({ ok: true, bridge: 'chatgpt-web' }))
+        return
+      }
       if (!isExtensionOrigin(origin)) { send(res, 403, 'extension origin required'); return }
       const headers = {
         'Access-Control-Allow-Origin': origin,

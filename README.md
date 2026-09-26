@@ -20,7 +20,7 @@ VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。
 
 ### Chrome 与 Edge 的 ChatGPT 网页提醒
 
-0.5.0 起提供 [浏览器扩展](browser-extension/README.md)，Chrome 和 Edge 可分别安装同一份扩展。扩展观察 `chatgpt.com` 中**你提交的新消息**，页面回复结束后把浏览器名称和对话标题交给本机鲸鱼，继续使用原有气泡和小黄鸭提示。扩展图标中可检查连接并发送测试提醒。桌面鲸鱼须先运行 0.5.0 或更新版本；无需 API Key。扩展仅请求 `chatgpt.com` 页面和 `127.0.0.1` 本机地址权限，不发送回复正文。
+0.5.0 起提供 [浏览器扩展](browser-extension/README.md)，Chrome 和 Edge 可分别安装同一份扩展。扩展观察 `chatgpt.com` 中**你提交的新消息**，页面回复结束后把浏览器名称和对话标题交给本机鲸鱼，继续使用原有气泡和小黄鸭提示。扩展图标中可检查连接并发送测试提醒。桌面鲸鱼须先运行 **0.5.1 或更新版本**；0.5.1 修复 Edge 的只读连接检查误报离线问题，扩展本身无需重装。无需 API Key。扩展仅请求 `chatgpt.com` 页面和 `127.0.0.1` 本机地址权限，不发送回复正文。
 
 这个提醒依据网页元素判断，网站改版可能需要更新扩展；关闭的标签页、其他设备和后台云端任务不保证收到。网页 ChatGPT 与本机 Codex 会话不是同一套日志：[OpenAI 官方说明](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex)将 Chat/Work 与桌面 Codex 区分开。开发者 API 的[完成 Webhook](https://developers.openai.com/api/docs/guides/webhooks)也不提供无密钥读取现有网页对话的能力。
 
