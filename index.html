@@ -133,6 +133,11 @@
         // 气泡展开时命中区要覆盖整个挂件（气泡在鲸鱼上方），否则只需要鲸鱼本体
         var r = (bubbleOpen ? root : (img || root)).getBoundingClientRect()
         var rect = { x: r.left, y: r.top, w: r.width, h: r.height }
+        var menuRect = null
+        if (menu) {
+          var m = menu.getBoundingClientRect()
+          menuRect = { x: m.left, y: m.top, w: m.width, h: m.height }
+        }
         var regions = []
         function include(element) {
           if (!element) return
@@ -146,20 +151,19 @@
         if (quota && !quota.hidden && quota.style.visibility !== 'hidden') include(quota)
         var notice = document.getElementById('codex-completion')
         if (notice && !notice.hidden) include(notice)
-        var force = dragging || !!menu
-        var key = JSON.stringify([rect, force, dragging, regions].map(function (item) {
+        var key = JSON.stringify([rect, menuRect, dragging, regions].map(function (item) {
           if (Array.isArray(item)) return item.map(function (box) { return [box.x, box.y, box.w, box.h].map(Math.round) })
           if (item && typeof item === 'object') return [item.x, item.y, item.w, item.h].map(Math.round)
           return item
         }))
         if (key === lastKey) return
         lastKey = key
-        window.__whale.reportState(rect, force, regions, dragging, !!menu)
+        window.__whale.reportState(rect, menuRect, regions, dragging, !!menu)
       }
       window.whaleReportState = reportWhaleState
       setInterval(reportWhaleState, 300)
-      // 立刻放开拖拽路径，并在松开、展开菜单后恢复小区域，避免快速拖动撞到裁剪边界。
-      ;['pointerdown', 'pointerup', 'pointercancel', 'click'].forEach(function (type) {
+      // 拖拽时跟随鲸鱼更新局部区域；普通点击绝不能再把整屏设为可接收鼠标。
+      ;['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'click'].forEach(function (type) {
         document.addEventListener(type, function () { setTimeout(reportWhaleState, 0) }, true)
       })
     }

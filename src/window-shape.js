@@ -3,11 +3,10 @@
 const PAD = 16 // 菜单缩放动画及鼠标命中留出余量。
 const MAX_REGIONS = 8
 
-function windowShape(regions, width, height, dragging = false) {
+function windowShape(regions, width, height) {
   const w = Math.max(0, Math.floor(Number(width) || 0))
   const h = Math.max(0, Math.floor(Number(height) || 0))
   if (!w || !h) return []
-  if (dragging) return [{ x: 0, y: 0, width: w, height: h }]
 
   const result = []
   for (const rect of Array.isArray(regions) ? regions.slice(0, MAX_REGIONS) : []) {

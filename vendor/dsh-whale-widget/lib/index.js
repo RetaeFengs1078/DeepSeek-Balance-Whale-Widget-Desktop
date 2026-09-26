@@ -134,7 +134,7 @@ var IMG_URL = '/dsh-whale/image.png?v=2'
 var GIF_URL = '/dsh-whale/rua.gif'
 
 var css = [
-  '.dshwv-root{position:fixed;right:0;bottom:0;--dshw-scale:1;--dshw-base:clamp(122px,calc(min(250px,min(100vw,100vh) * 0.28) * var(--dshw-scale)),625px);width:var(--dshw-base);height:var(--dshw-base);pointer-events:none;user-select:none;-webkit-user-select:none;z-index:9999;font-family:inherit;transition:left .16s ease,top .16s ease,transform .3s ease}',
+  '.dshwv-root{position:fixed;right:0;bottom:0;--dshw-scale:1;--dshw-base:clamp(122px,calc(min(250px,var(--dshw-viewport-min,min(100vw,100vh)) * 0.28) * var(--dshw-scale)),625px);width:var(--dshw-base);height:var(--dshw-base);pointer-events:none;user-select:none;-webkit-user-select:none;z-index:9999;font-family:inherit;transition:left .16s ease,top .16s ease,transform .3s ease}',
   '.dshwv-root.dshwv-left{transform:scaleX(-1)}',
   '.dshwv-root.dshwv-dragging{cursor:grabbing;transition:none}',
   '.dshwv-body{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:50% 100%;transition:transform .22s cubic-bezier(.34,1.56,.64,1)}',
@@ -659,7 +659,14 @@ function hideCostBubble() {
 }
 
 function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v) }
+function desktopLayout() { return window.__whale && window.__whale.getLayout ? window.__whale.getLayout() : null }
+function originX() { var layout = desktopLayout(); return layout ? layout.originX : 0 }
+function originY() { var layout = desktopLayout(); return layout ? layout.originY : 0 }
+function pointerX(e) { var layout = desktopLayout(); return layout && isFinite(e.screenX) ? e.screenX - layout.desktopX : e.clientX }
+function pointerY(e) { var layout = desktopLayout(); return layout && isFinite(e.screenY) ? e.screenY - layout.desktopY : e.clientY }
 function viewport() {
+  var layout = desktopLayout()
+  if (layout) return { w: layout.width, h: layout.height }
   return {
     w: window.innerWidth || document.documentElement.clientWidth || 1280,
     h: window.innerHeight || document.documentElement.clientHeight || 800
@@ -732,8 +739,8 @@ function render() {
 function express() {
   root.style.right = 'auto'
   root.style.bottom = 'auto'
-  root.style.left = state.left + 'px'
-  root.style.top = state.top + 'px'
+  root.style.left = (state.left - originX()) + 'px'
+  root.style.top = (state.top - originY()) + 'px'
   root.classList.toggle('dshwv-left', state.h === 'left')
 }
 function settle() {
@@ -923,8 +930,8 @@ function setScale(v) {
   // when flipped. Growing extends the widget up-left / up-right from that
   // corner; shrinking pulls it back toward the corner. The whale always hugs
   // its corner while scaling.
-  var fx = state.h === 'left' ? rect.left : rect.right
-  var fy = rect.bottom
+  var fx = (state.h === 'left' ? rect.left : rect.right) + originX()
+  var fy = rect.bottom + originY()
   state.scale = next
   root.style.setProperty('--dshw-scale', String(next))
   scaleInput.value = String(next)
@@ -1061,7 +1068,7 @@ function snapCheck() {
   var rect = root.getBoundingClientRect()
   var vp = viewport()
   var w = rect.width, h = rect.height
-  var left = rect.left, top = rect.top
+  var left = rect.left + originX(), top = rect.top + originY()
   var centerX = left + w / 2
   var centerY = top + h / 2
   var moved = false
@@ -1099,7 +1106,7 @@ function positionMenu() {
     var r = root.getBoundingClientRect()
     var b = menuBtn.getBoundingClientRect()
     var vp = viewport()
-    var onLeft = r.left + r.width / 2 < vp.w / 2
+    var onLeft = r.left + originX() + r.width / 2 < vp.w / 2
     // the menu appears ABOVE the button, anchored to its side:
     // right side → menu bottom-right aligns with the button's top-right;
     // left side → menu bottom-left aligns with the button's top-left
@@ -1108,11 +1115,11 @@ function positionMenu() {
       menuBox.style.right = 'auto'
       menuBox.style.transformOrigin = 'bottom left'
     } else {
-      menuBox.style.right = (vp.w - b.right) + 'px'
+      menuBox.style.right = (window.innerWidth - b.right) + 'px'
       menuBox.style.left = 'auto'
       menuBox.style.transformOrigin = 'bottom right'
     }
-    menuBox.style.bottom = (vp.h - b.top) + 'px'
+    menuBox.style.bottom = (window.innerHeight - b.top) + 'px'
     menuBox.style.top = 'auto'
   } catch (err) {}
 }
@@ -1165,7 +1172,9 @@ function onDocPointerDown(e) {
   try { e.preventDefault(); e.stopPropagation() } catch (err) {}
   var vp = viewport()
   var rect = root.getBoundingClientRect()
-  drag = { active: true, startX: e.clientX, startY: e.clientY, origLeft: rect.left, origTop: rect.top, w: rect.width, h: rect.height, moved: false, vp: vp }
+  drag = { active: true, startX: pointerX(e), startY: pointerY(e), origLeft: rect.left + originX(), origTop: rect.top + originY(), w: rect.width, h: rect.height, moved: false, vp: vp }
+  // 系统窗口只裁剪到鲸鱼附近；捕获指针保证拖出旧区域时仍可收到移动和松开事件。
+  try { if (e.target && e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId) } catch (err) {}
   root.classList.add('dshwv-dragging')
   pressDown()
   setWidgetCursor('grabbing')
@@ -1175,8 +1184,8 @@ function onDocPointerDown(e) {
 }
 function onDocPointerMove(e) {
   if (!drag || !drag.active) return
-  var dx = e.clientX - drag.startX
-  var dy = e.clientY - drag.startY
+  var dx = pointerX(e) - drag.startX
+  var dy = pointerY(e) - drag.startY
   if (dx * dx + dy * dy >= CLICK_SQ) drag.moved = true
   // Keep the pre-drag flip orientation while dragging (state.h/v stay as they
   // were); on release endDrag() recomputes the anchors and settle() flips the
@@ -1236,8 +1245,8 @@ function endDrag(e, clickAllowed) {
   root.classList.remove('dshwv-dragging')
   setWidgetCursor(isWhaleHit(e) ? 'grab' : '')
   if (clickAllowed && !drag.moved) { showBubble(); refresh(true); return }
-  var dx = e.clientX - drag.startX
-  var dy = e.clientY - drag.startY
+  var dx = pointerX(e) - drag.startX
+  var dy = pointerY(e) - drag.startY
   var left = clamp(drag.origLeft + dx, 0, Math.max(0, drag.vp.w - drag.w))
   var top = clamp(drag.origTop + dy, 0, Math.max(0, drag.vp.h - drag.h))
   var centerX = left + drag.w / 2
@@ -1292,14 +1301,34 @@ function applyAnchorPos() {
     return true
   } catch (err) { return false }
 }
-window.addEventListener('resize', function () {
+if (window.__whale && window.__whale.onLayoutChanged) {
+  window.__whale.onLayoutChanged(function (layout) {
+    document.documentElement.style.setProperty('--dshw-viewport-min', Math.min(layout.width, layout.height) + 'px')
+    // 系统窗口移动时立即抵消坐标偏移，不能播放鲸鱼自身的位移动画。
+    var previousTransition = root.style.transition
+    root.style.transition = 'none'
+    if (layout.width !== lastDesktopWidth || layout.height !== lastDesktopHeight) {
+      lastDesktopWidth = layout.width
+      lastDesktopHeight = layout.height
+      if (!(state.h === null && state.v === null && applyAnchorPos())) settle()
+    } else express()
+    root.getBoundingClientRect()
+    requestAnimationFrame(function () { root.style.transition = previousTransition })
+    if (menuOpen) positionMenu()
+    if (window.whaleReportState) setTimeout(window.whaleReportState, 0)
+  })
+} else window.addEventListener('resize', function () {
   if (state.h === null && state.v === null && applyAnchorPos()) return
   settle()
 })
 
+var firstLayout = desktopLayout()
+var lastDesktopWidth = firstLayout ? firstLayout.width : 0
+var lastDesktopHeight = firstLayout ? firstLayout.height : 0
+if (firstLayout) document.documentElement.style.setProperty('--dshw-viewport-min', Math.min(firstLayout.width, firstLayout.height) + 'px')
 var rect0 = root.getBoundingClientRect()
-state.left = rect0.left
-state.top = rect0.top
+state.left = rect0.left + originX()
+state.top = rect0.top + originY()
 express()
 render()
 applySoundSet()

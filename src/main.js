@@ -12,6 +12,7 @@ const path = require('node:path')
 const { spawn, spawnSync } = require('node:child_process')
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage } = require('electron')
 const { windowShape } = require('./window-shape.js')
+const { compactBounds } = require('./window-layout.js')
 
 const APP_ROOT = path.join(__dirname, '..')
 
@@ -21,12 +22,28 @@ let interactive = false
 let serverRef = null
 let pageUrl = ''
 
-// 鲸鱼在窗口坐标系里的矩形；force 表示「拖拽中 / 菜单或气泡展开」时必须接管鼠标
+// 鲸鱼和菜单在窗口坐标系里的矩形。仅拖拽时需要持续接管鼠标。
 let whaleRect = null
+let menuRect = null
 let forceInteractive = false
 let winPos = [0, 0]
 let lastShapeKey = ''
 let focusable = false
+let desktopBounds = null
+let layoutVersion = 0
+let dragStartRect = null
+
+function currentLayout() {
+  const b = win && !win.isDestroyed() ? win.getBounds() : desktopBounds
+  return {
+    width: desktopBounds.width, height: desktopBounds.height,
+    desktopX: desktopBounds.x, desktopY: desktopBounds.y,
+    originX: b.x - desktopBounds.x, originY: b.y - desktopBounds.y,
+    version: layoutVersion,
+  }
+}
+
+ipcMain.on('whale:layout:get', (event) => { event.returnValue = currentLayout() })
 
 function syncFocusable(menuOpen) {
   if (process.platform !== 'win32' || !win || win.isDestroyed()) return
@@ -36,10 +53,10 @@ function syncFocusable(menuOpen) {
   catch (err) { console.error('[whale] 焦点模式切换失败:', err) }
 }
 
-function applyWindowShape(regions, dragging) {
+function applyWindowShape(regions) {
   if (process.platform !== 'win32' || !win || win.isDestroyed() || typeof win.setShape !== 'function') return
   const [width, height] = win.getSize()
-  const rects = windowShape(regions, width, height, dragging)
+  const rects = windowShape(regions, width, height)
   if (!rects.length) return
   const key = JSON.stringify(rects)
   if (key === lastShapeKey) return
@@ -165,7 +182,7 @@ app.on('child-process-gone', (_event, details) => {
   app.exit(0)
 })
 
-// 覆盖所有显示器的可用区域（不含任务栏）：鲸鱼的可拖范围 = 整块屏幕
+// 所有显示器的可用区域（不含任务栏）：鲸鱼的虚拟可拖范围。
 function screenBounds() {
   let x0 = Infinity
   let y0 = Infinity
@@ -186,7 +203,13 @@ function screenBounds() {
 }
 
 function createWindow() {
-  const bounds = screenBounds()
+  desktopBounds = screenBounds()
+  const bounds = {
+    x: desktopBounds.x + Math.max(0, desktopBounds.width - 420),
+    y: desktopBounds.y + Math.max(0, desktopBounds.height - 420),
+    width: Math.min(420, desktopBounds.width),
+    height: Math.min(420, desktopBounds.height),
+  }
   win = new BrowserWindow({
     ...bounds,
     transparent: true,      // 真透明：页面透明的地方能看到桌面
@@ -218,6 +241,10 @@ function createWindow() {
   focusable = false
   // 不转发鼠标事件：透明区完全不吃事件，空闲时渲染进程零唤醒
   win.setIgnoreMouseEvents(true)
+  // 首次渲染前也不能让全屏透明窗口参与浏览器的视频合成。
+  if (process.platform === 'win32' && typeof win.setShape === 'function') {
+    try { win.setShape([{ x: bounds.width - 1, y: bounds.height - 1, width: 1, height: 1 }]) } catch {}
+  }
   applyTop(true)
 
   // 排查时开 WHALE_LOG_RENDERER=1 可把页面 console 打到终端
@@ -230,7 +257,7 @@ function createWindow() {
   win.loadURL(pageUrl)
   win.once('ready-to-show', () => {
     const b = win.getBounds()
-    console.log('[whale] 窗口: ' + b.width + 'x' + b.height + ' @ ' + b.x + ',' + b.y + '（鲸鱼可拖范围 = 整块屏幕）')
+    console.log('[whale] 窗口: ' + b.width + 'x' + b.height + ' @ ' + b.x + ',' + b.y + '（可拖范围 = 全桌面）')
     win.show()
   })
   win.on('closed', () => { win = null })
@@ -246,35 +273,37 @@ function createWindow() {
 
   const refit = () => {
     if (!win || win.isDestroyed()) return
-    const b = screenBounds()
-    win.setBounds(b)
-    winPos = [b.x, b.y]
-    // 新显示器布局下旧区域坐标可能失效；下一次页面上报会重新裁剪。
+    desktopBounds = screenBounds()
+    const b = win.getBounds()
+    const next = compactBounds([{ x: 0, y: 0, w: b.width, h: b.height }], b, desktopBounds)
+    win.setBounds(next)
+    winPos = [next.x, next.y]
     if (process.platform === 'win32' && typeof win.setShape === 'function') {
-      try { win.setShape([]); lastShapeKey = '' } catch {}
+      try { win.setShape([{ x: 0, y: 0, width: 1, height: 1 }]); lastShapeKey = '' } catch {}
     }
+    layoutVersion++
+    win.webContents.send('whale:layout-changed', currentLayout())
   }
   screen.on('display-metrics-changed', refit)
   screen.on('display-added', refit)
   screen.on('display-removed', refit)
 }
 
-// 命中判定放主进程：整屏透明窗口若靠「转发每次 mousemove」判断，
+// 命中判定放主进程：若靠「转发每次 mousemove」判断，
 // 用户每动一下鼠标都要唤醒渲染进程，代价高一个数量级。
-function cursorOnWhale() {
-  if (!whaleRect || !win || win.isDestroyed()) return false
+function cursorOnInteractiveRegion() {
+  if (!win || win.isDestroyed()) return false
   const p = screen.getCursorScreenPoint()
   const pad = 8
-  return (
-    p.x >= winPos[0] + whaleRect.x - pad &&
-    p.x <= winPos[0] + whaleRect.x + whaleRect.w + pad &&
-    p.y >= winPos[1] + whaleRect.y - pad &&
-    p.y <= winPos[1] + whaleRect.y + whaleRect.h + pad
-  )
+  return [whaleRect, menuRect].some((rect) => rect &&
+    p.x >= winPos[0] + rect.x - pad &&
+    p.x <= winPos[0] + rect.x + rect.w + pad &&
+    p.y >= winPos[1] + rect.y - pad &&
+    p.y <= winPos[1] + rect.y + rect.h + pad)
 }
 
 function syncInteractive() {
-  const next = forceInteractive || cursorOnWhale()
+  const next = forceInteractive || cursorOnInteractiveRegion()
   if (next === interactive) return
   interactive = next
   if (!win || win.isDestroyed()) return
@@ -286,10 +315,26 @@ function syncInteractive() {
 let lastLoggedW = -1
 let logCount = 0
 ipcMain.on('whale:state', (_event, state) => {
-  if (!state) return
+  if (!state || state.layoutVersion !== layoutVersion || !win || win.isDestroyed()) return
+  const oldBounds = win.getBounds()
   const r = state.rect
+  if (state.dragging && r && !dragStartRect) dragStartRect = { x: oldBounds.x + r.x, y: oldBounds.y + r.y }
+  if (!state.dragging) dragStartRect = null
+  const movedDrag = state.dragging && dragStartRect && r &&
+    Math.hypot(oldBounds.x + r.x - dragStartRect.x, oldBounds.y + r.y - dragStartRect.y) > 6
+  const target = movedDrag ? desktopBounds : compactBounds(state.regions, oldBounds, desktopBounds)
+  const changed = target.x !== oldBounds.x || target.y !== oldBounds.y ||
+    target.width !== oldBounds.width || target.height !== oldBounds.height
+  if (changed) {
+    win.setBounds(target)
+    winPos = [target.x, target.y]
+    layoutVersion++
+    win.webContents.send('whale:layout-changed', currentLayout())
+  }
+  const shiftX = oldBounds.x - target.x
+  const shiftY = oldBounds.y - target.y
   if (r && typeof r.x === 'number' && typeof r.w === 'number' && r.w > 0) {
-    whaleRect = { x: r.x, y: r.y, w: r.w, h: r.h }
+    whaleRect = { x: r.x + shiftX, y: r.y + shiftY, w: r.w, h: r.h }
     // 尺寸变化时记一笔：挂件启动时先用默认值渲染，读到配置后才会缩放到设定大小
     const w = Math.round(whaleRect.w)
     if (w !== lastLoggedW && logCount < 4) {
@@ -298,9 +343,11 @@ ipcMain.on('whale:state', (_event, state) => {
       console.log('[whale] 挂件尺寸: ' + whaleRect.w.toFixed(1) + 'px @ ' + Math.round(whaleRect.x) + ',' + Math.round(whaleRect.y))
     }
   }
-  forceInteractive = !!state.force
+  menuRect = state.menuOpen && state.menuRect
+    ? { ...state.menuRect, x: state.menuRect.x + shiftX, y: state.menuRect.y + shiftY } : null
+  forceInteractive = !!state.dragging
   syncFocusable(!!state.menuOpen)
-  applyWindowShape(state.regions, !!state.dragging)
+  applyWindowShape((state.regions || []).map((box) => ({ ...box, x: box.x + shiftX, y: box.y + shiftY })))
   syncInteractive()
 })
 
