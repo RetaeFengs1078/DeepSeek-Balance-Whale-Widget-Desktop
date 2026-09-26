@@ -16,13 +16,13 @@
 
 小鲸鱼每 3 秒检查本机 Codex 会话日志中的 `task_complete`，完成时直接打开**点击鲸鱼时使用的原有气泡**，显示来源与对话标题，并播放内置小黄鸭音效（遵循音量和静音设置）。支持本机 **Codex 客户端**、**VS Code Codex 插件**及命令行；过滤后台子任务，启动时不补弹旧提醒。0.4.3 修复了完成时间为 Unix 秒数时提醒被丢弃的问题，本机桌面端与 VS Code 的现有日志均已验证。对话标题优先取本机 Codex 数据库，读不到时显示首条提问或「未命名对话」。不读取聊天正文用于网络传输。
 
-**0.6.0：点击完成气泡即可返回。**本机 Codex 客户端提醒会激活已经打开的 ChatGPT 客户端窗口；VS Code 提醒会激活已经打开的 VS Code，Remote SSH 提醒优先选择标题中带对应主机名的 VS Code 窗口。浏览器提醒会在原来的 Chrome / Edge 窗口中激活原对话标签页，**不会新建标签页**；原对话已关闭时不跳转。鲸鱼本身仍保持置顶。
+**0.6.1：暂时关闭完成气泡的点击跳转。**点击气泡只会关闭提醒；来源、对话标题和小黄鸭音效继续正常显示。0.6.0 的回跳代码仍保留，当前版本默认不调用。
 
 VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。本机 `config.json` 的 `CODEX_REMOTE_SSH_HOSTS` 默认为 `["gpu-5", "gpu-7"]`；换电脑时可改成自己的 SSH Host 别名。需要 SSH 免交互登录且远端有 `python3`；登录失败时会退避重试。远端会话标题和完成时间只返回本机小鲸鱼，不上传第三方。
 
 ### Chrome 与 Edge 的 ChatGPT 网页提醒
 
-**便携下载**：[从 GitHub Releases 下载 0.6.0 桌面程序及 Chrome / Edge 扩展](https://github.com/RetaeFengs1078/DeepSeek-Balance-Whale-Widget-Desktop/releases/tag/v0.6.0)。下载对应浏览器的 ZIP 并解压，保留整个「小鲸鱼浏览器扩展」文件夹；在浏览器扩展管理页打开开发者模式，选择这个包含 `manifest.json` 的文件夹加载。两款浏览器使用相同源码。点击气泡返回原标签页须同时更新桌面程序与扩展到 **0.6.0**。详细步骤见[扩展安装说明](browser-extension/README.md)。
+**便携下载**：[从 GitHub Releases 下载桌面程序及 Chrome / Edge 扩展](https://github.com/RetaeFengs1078/DeepSeek-Balance-Whale-Widget-Desktop/releases)。下载对应浏览器的 ZIP 并解压，保留整个「小鲸鱼浏览器扩展」文件夹；在浏览器扩展管理页打开开发者模式，选择这个包含 `manifest.json` 的文件夹加载。两款浏览器使用相同源码。现有 0.6.0 浏览器扩展可继续搭配 0.6.1 桌面程序，无需重新加载。详细步骤见[扩展安装说明](browser-extension/README.md)。
 
 0.5.0 起提供 [浏览器扩展](browser-extension/README.md)，Chrome 和 Edge 可分别安装同一份扩展。扩展观察 `chatgpt.com` 中**你提交的新消息**，页面回复结束后把浏览器名称和对话标题交给本机鲸鱼，继续使用原有气泡和小黄鸭提示。扩展图标中可检查连接并发送测试提醒。桌面鲸鱼须先运行 **0.5.1 或更新版本**；0.5.1 修复 Edge 的只读连接检查误报离线问题，扩展本身无需重装。无需 API Key。扩展仅请求 `chatgpt.com` 页面和 `127.0.0.1` 本机地址权限，不发送回复正文。
 

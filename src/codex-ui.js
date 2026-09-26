@@ -50,6 +50,8 @@
   var showingCompletion = false
   var activeCompletion = null
   var remoteStatus = null
+  // 暂停完成气泡的点击跳转；保留提醒和后端能力，方便以后恢复。
+  var completionNavigationEnabled = false
   function showNextCompletion() {
     if (showingCompletion || !completionQueue.length) return
     if (typeof window.whaleShowCompletion !== 'function') {
@@ -67,6 +69,7 @@
     }, 8500)
   }
   document.addEventListener('click', function (click) {
+    if (!completionNavigationEnabled) return
     if (!activeCompletion || !window.__whale || !window.__whale.activateCompletion) return
     if (!click.target || !click.target.closest || !click.target.closest('.dshwv-bubble.dshwv-completion-open')) return
     window.__whale.activateCompletion(activeCompletion.id).catch(function () {})
