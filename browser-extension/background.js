@@ -1,5 +1,6 @@
 const PORTS = Array.from({ length: 10 }, (_, index) => 8788 + index)
 const OPEN_PREFIX = 'whaleOpen:'
+const QUESTION_PREFIX = 'whaleQuestion:'
 let clientIdPromise = null
 let actionSocket = null
 let heartbeat = null
@@ -34,7 +35,7 @@ async function callWhale(path, options = {}) {
       })
       if (!response.ok) continue
       const data = await response.json()
-      if (data && data.ok) return { ok: true, port }
+      if (data && data.ok) return { ...data, port }
     } catch (_) {
       // 可能该端口没有运行鲸鱼；继续尝试下一端口。
     } finally {
@@ -42,6 +43,41 @@ async function callWhale(path, options = {}) {
     }
   }
   return { ok: false, error: '未找到正在运行的小鲸鱼（请先打开桌面程序）' }
+}
+
+let flushingQuestions = false
+async function flushQuestions() {
+  if (flushingQuestions) return
+  flushingQuestions = true
+  try {
+    const all = await chrome.storage.local.get(null)
+    const keys = Object.keys(all).filter(key => key.startsWith(QUESTION_PREFIX))
+    for (const key of keys) {
+      const result = await callWhale('/whale/usage/question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Whale-Bridge': '1' },
+        body: JSON.stringify(all[key]),
+      })
+      if (!result.ok) break
+      await chrome.storage.local.remove(key)
+    }
+  } finally { flushingQuestions = false }
+}
+
+async function queueQuestion(message) {
+  if (message.model !== '6 Pro' || !/^[a-f0-9-]{36}$/i.test(message.id || '')) return { ok: false }
+  const item = { id: message.id, browser: browserName(), model: '6 Pro' }
+  await chrome.storage.local.set({ [QUESTION_PREFIX + item.id]: item })
+  void flushQuestions().catch(() => {})
+  return { ok: true, queued: true }
+}
+
+function setReset(resetAt, source) {
+  return callWhale('/whale/usage/reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Whale-Bridge': '1' },
+    body: JSON.stringify({ browser: browserName(), resetAt, source }),
+  })
 }
 
 async function rememberTab(id, tab, url) {
@@ -145,6 +181,22 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     sendCompletion(message.conversation, sender.tab, message.url || sender.url).then(respond).catch(() => respond({ ok: false }))
     return true
   }
+  if (message.type === 'question' || message.type === 'reset-detected') {
+    if (!sender.tab || !/^https:\/\/chatgpt\.com\//.test(sender.url || '')) return
+    const action = message.type === 'question'
+      ? queueQuestion(message)
+      : setReset(message.resetAt, 'page')
+    action.then(respond).catch(() => respond({ ok: false }))
+    return true
+  }
+  if (message.type === 'usage' || message.type === 'set-reset') {
+    if (!sender.url || !sender.url.startsWith(chrome.runtime.getURL(''))) return
+    const action = message.type === 'usage'
+      ? callWhale('/whale/usage')
+      : setReset(message.resetAt, 'manual')
+    action.then(respond).catch(() => respond({ ok: false }))
+    return true
+  }
   if (message.type === 'ping' || message.type === 'test') {
     if (!sender.url || !sender.url.startsWith(chrome.runtime.getURL(''))) return
     const action = message.type === 'ping'
@@ -156,6 +208,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
 })
 
 chrome.alarms.create('whaleReconnect', { periodInMinutes: 0.5 })
-chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'whaleReconnect') void connectBridge() })
-chrome.runtime.onStartup.addListener(() => { void connectBridge() })
+chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'whaleReconnect') { void connectBridge(); void flushQuestions() } })
+chrome.runtime.onStartup.addListener(() => { void connectBridge(); void flushQuestions() })
 void connectBridge()
+void flushQuestions()

@@ -18,11 +18,17 @@
 
 **0.6.1：暂时关闭完成气泡的点击跳转。**点击气泡只会关闭提醒；来源、对话标题和小黄鸭音效继续正常显示。0.6.0 的回跳代码仍保留，当前版本默认不调用。
 
+### 6 Pro 提问计数与每日额度统计（0.7.0）
+
+Chrome 和 Edge 扩展分别识别 ChatGPT 普通聊天窗口当前选中的 **6 Pro**。只有发送后网页确实出现新提问才计数；其他模型、扩展测试提醒和回复完成事件不计数。扩展断开桌面程序时暂存事件，重连后补交。扩展弹窗和鲸鱼菜单显示两款浏览器各自的今日、本周次数。扩展弹窗可为当前浏览器手动填写下次周重置时间；如果网页模型菜单提供明确的机器可读时间，扩展也会尝试自动识别。手动设置优先。到点后本周次数清零，下次重置时间顺延七天；未设时间时本周次数为开始记录以来的累计值。
+
+每天的统计文件保存在安装目录的 `data/usage-history/YYYY-MM-DD.json`，含 Chrome/Edge 次数及当日 Codex 额度有效消耗百分比，不含提问和回复正文。`data/usage-history/state.json` 保存各浏览器的周计数与下次重置时间，以及上一次额度采样。鲸鱼每小时从本机 Codex 日志取最新额度快照，只比较**相邻小时、同一重置周期**的已用百分比正差值；余额增加（例如换号）、窗口重置、没有新快照或漏掉整点时跳过。5 小时和每周窗口分别累加，不能把这些百分比当作 6 Pro 官方次数额度。
+
 VS Code Remote SSH 可通过现有 SSH 配置读取远端 `~/.codex/sessions`。本机 `config.json` 的 `CODEX_REMOTE_SSH_HOSTS` 默认为 `["gpu-5", "gpu-7"]`；换电脑时可改成自己的 SSH Host 别名。需要 SSH 免交互登录且远端有 `python3`；登录失败时会退避重试。远端会话标题和完成时间只返回本机小鲸鱼，不上传第三方。
 
 ### Chrome 与 Edge 的 ChatGPT 网页提醒
 
-**便携下载**：[从 GitHub Releases 下载桌面程序及 Chrome / Edge 扩展](https://github.com/RetaeFengs1078/DeepSeek-Balance-Whale-Widget-Desktop/releases)。下载对应浏览器的 ZIP 并解压，保留整个「小鲸鱼浏览器扩展」文件夹；在浏览器扩展管理页打开开发者模式，选择这个包含 `manifest.json` 的文件夹加载。两款浏览器使用相同源码。现有 0.6.0 浏览器扩展可继续搭配 0.6.1 桌面程序，无需重新加载。详细步骤见[扩展安装说明](browser-extension/README.md)。
+**便携下载**：[从 GitHub Releases 下载桌面程序及 Chrome / Edge 扩展](https://github.com/RetaeFengs1078/DeepSeek-Balance-Whale-Widget-Desktop/releases)。下载对应浏览器的 ZIP 并解压，保留整个「小鲸鱼浏览器扩展」文件夹；在浏览器扩展管理页打开开发者模式，选择这个包含 `manifest.json` 的文件夹加载。两款浏览器使用相同源码。6 Pro 计数须将桌面程序和扩展都更新到 **0.7.0**。详细步骤见[扩展安装说明](browser-extension/README.md)。
 
 0.5.0 起提供 [浏览器扩展](browser-extension/README.md)，Chrome 和 Edge 可分别安装同一份扩展。扩展观察 `chatgpt.com` 中**你提交的新消息**，页面回复结束后把浏览器名称和对话标题交给本机鲸鱼，继续使用原有气泡和小黄鸭提示。扩展图标中可检查连接并发送测试提醒。桌面鲸鱼须先运行 **0.5.1 或更新版本**；0.5.1 修复 Edge 的只读连接检查误报离线问题，扩展本身无需重装。无需 API Key。扩展仅请求 `chatgpt.com` 页面和 `127.0.0.1` 本机地址权限，不发送回复正文。
 

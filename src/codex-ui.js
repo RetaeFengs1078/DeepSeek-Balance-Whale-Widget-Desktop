@@ -50,6 +50,7 @@
   var showingCompletion = false
   var activeCompletion = null
   var remoteStatus = null
+  var usageStatus = null
   // 暂停完成气泡的点击跳转；保留提醒和后端能力，方便以后恢复。
   var completionNavigationEnabled = false
   function showNextCompletion() {
@@ -116,6 +117,21 @@
       .then(function (data) { latest = data; paint(data) })
       .catch(function () { paint({ ok: false, message: '读取 Codex 额度失败' }) })
       .finally(function () { busy = false })
+  }
+  function refreshUsage() {
+    fetch('/whale/usage', { cache: 'no-store' })
+      .then(function (response) { return response.json() })
+      .then(function (data) {
+        if (!data || !data.ok || !usageStatus) return
+        var chrome = data.browsers && data.browsers.Chrome || {}
+        var edge = data.browsers && data.browsers.Edge || {}
+        var quota = data.codexUsage || {}
+        var five = quota.fiveHour && quota.fiveHour.usedPercent || 0
+        var week = quota.weekly && quota.weekly.usedPercent || 0
+        usageStatus.textContent = '6 Pro Chrome：今日 ' + (chrome.today || 0) + ' / 本周 ' + (chrome.weekly || 0) +
+          '\n6 Pro Edge：今日 ' + (edge.today || 0) + ' / 本周 ' + (edge.weekly || 0) +
+          '\n今日 Codex 额度消耗：5h ' + pct(five) + ' · 周 ' + pct(week)
+      }).catch(function () {})
   }
   window.whaleRefreshCodex = refresh
 
@@ -185,6 +201,15 @@
     statusRow.appendChild(remoteStatus)
     menu.appendChild(statusRow)
 
+    var usageRow = document.createElement('div')
+    usageRow.className = 'dshwv-menu-row codex-ext'
+    usageStatus = document.createElement('span')
+    usageStatus.style.cssText = 'font-size:11px;color:#536ba9;white-space:pre-line;line-height:1.5'
+    usageStatus.textContent = '6 Pro 计数：读取中…'
+    usageRow.appendChild(usageStatus)
+    menu.appendChild(usageRow)
+    refreshUsage()
+
     if (!window.__whale || !window.__whale.patchSettings) return
     function settingRow(text, field) {
       var row = document.createElement('label')
@@ -215,4 +240,5 @@
   refreshCompletions()
   setInterval(refreshCompletions, 3000)
   setInterval(refresh, 60000)
+  setInterval(refreshUsage, 60000)
 })()

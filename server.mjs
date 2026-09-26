@@ -13,6 +13,7 @@ import { CodexCompletionReader } from './src/codex-completions.mjs'
 import { RemoteCompletionReader } from './src/remote-completions.mjs'
 import { BrowserCompletionStore, isExtensionOrigin } from './src/browser-completions.mjs'
 import { BrowserActionBridge } from './src/browser-actions.mjs'
+import { UsageHistory } from './src/usage-history.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 
@@ -79,6 +80,11 @@ export async function startServer(opts = {}) {
   const completionReader = new CodexCompletionReader()
   const browserCompletions = new BrowserCompletionStore()
   const browserActions = new BrowserActionBridge()
+  const usageHistory = new UsageHistory(dirs.dataDir)
+  const sampleQuota = () => codexReader.refresh().then(snapshot => usageHistory.sampleQuota(snapshot)).catch(() => {})
+  const quotaTimer = setInterval(sampleQuota, 60000)
+  quotaTimer.unref()
+  void sampleQuota()
   await completionReader.refresh() // 启动前的旧事件只作基线，不弹历史通知。
   const configuredHosts = fileCfg.CODEX_REMOTE_SSH_HOSTS ?? process.env.CODEX_REMOTE_SSH_HOSTS ?? ['gpu-5', 'gpu-7']
   const remoteHosts = Array.isArray(configuredHosts) ? configuredHosts : String(configuredHosts).split(',').map((host) => host.trim()).filter(Boolean)
@@ -102,6 +108,7 @@ export async function startServer(opts = {}) {
   let indexTap = null
   const cleanups = []
   cleanups.push(() => clearInterval(remoteTimer))
+  cleanups.push(() => clearInterval(quotaTimer))
 
   const webServer = {
     register(spec) {
@@ -282,6 +289,41 @@ export async function startServer(opts = {}) {
     try { pathname = new URL(req.url, 'http://localhost').pathname } catch (err) { pathname = '/' }
 
     if (pathname === '/favicon.ico') { res.writeHead(204); res.end(); return }
+    if (pathname === '/whale/usage' || pathname === '/whale/usage/question' || pathname === '/whale/usage/reset') {
+      const origin = String(req.headers.origin || '')
+      if (origin && !isExtensionOrigin(origin)) { send(res, 403, 'extension origin required'); return }
+      const headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+        ...(origin ? { 'Access-Control-Allow-Origin': origin, 'Vary': 'Origin' } : {}),
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Whale-Bridge',
+      }
+      if (req.method === 'OPTIONS' && isExtensionOrigin(origin)) { res.writeHead(204, headers); res.end(); return }
+      if (pathname === '/whale/usage' && req.method === 'GET') {
+        res.writeHead(200, headers)
+        res.end(JSON.stringify(usageHistory.summary()))
+        return
+      }
+      if (req.method !== 'POST' || !isExtensionOrigin(origin) || req.headers['x-whale-bridge'] !== '1' ||
+          !String(req.headers['content-type'] || '').startsWith('application/json')) {
+        res.writeHead(405, headers); res.end(JSON.stringify({ ok: false })); return
+      }
+      let body = ''
+      req.on('data', chunk => { body += chunk; if (body.length > 2048) req.destroy() })
+      req.on('end', () => {
+        let ok = false
+        try {
+          const item = JSON.parse(body)
+          ok = pathname === '/whale/usage/question'
+            ? usageHistory.recordQuestion(item)
+            : usageHistory.setReset(item.browser, item.resetAt, item.source)
+        } catch (err) { console.error('[whale] 统计写入失败:', err) }
+        res.writeHead(ok ? 200 : 400, headers)
+        res.end(JSON.stringify({ ok, ...(ok ? { summary: usageHistory.summary() } : {}) }))
+      })
+      return
+    }
     if (pathname === '/whale/browser-bridge' || pathname === '/whale/browser-completion') {
       const origin = String(req.headers.origin || '')
       // Chromium 扩展对已授权的本机地址发简单 GET 时可能省略 Origin。

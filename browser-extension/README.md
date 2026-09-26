@@ -1,23 +1,25 @@
 # 小鲸鱼 ChatGPT 网页提醒扩展
 
-同一份 Manifest V3 扩展可分别安装到 **Google Chrome** 和 **Microsoft Edge**。扩展只在 `https://chatgpt.com/` 的已打开标签页工作；小鲸鱼桌面程序须为 **0.5.1 或更新版本**并保持运行。**0.6.1 桌面版暂时关闭完成气泡的点击跳转**，点击只会关闭提醒。无需 OpenAI API Key、DeepSeek Harness 或 Codex 客户端。
+同一份 Manifest V3 扩展可分别安装到 **Google Chrome** 和 **Microsoft Edge**。扩展只在 `https://chatgpt.com/` 的已打开标签页工作；小鲸鱼桌面程序须为 **0.7.0 或更新版本**并保持运行。扩展分别统计两款浏览器里 **6 Pro** 的实际新提问，弹窗可填写当前浏览器的每周重置时间；每日数据由鲸鱼保存在本机。完成气泡的点击跳转仍暂时关闭。无需 OpenAI API Key、DeepSeek Harness 或 Codex 客户端。
 
-**便携包下载**：[GitHub Releases · 桌面程序与扩展 0.6.0](https://github.com/RetaeFengs1078/DeepSeek-Balance-Whale-Widget-Desktop/releases/tag/v0.6.0)。Chrome 和 Edge 包内的扩展相同，文件名区分安装说明；浏览器要求先解压，再通过扩展管理页加载包含 `manifest.json` 的文件夹。
+**便携包下载**：[GitHub Releases · 桌面程序与扩展](https://github.com/RetaeFengs1078/DeepSeek-Balance-Whale-Widget-Desktop/releases)。Chrome 和 Edge 包内的扩展相同，文件名区分安装说明；浏览器要求先解压，再通过扩展管理页加载包含 `manifest.json` 的文件夹。
 
 ## 安装 Chrome
 
-1. 解压 `WhaleWidget-ChatGPT-Chrome-Extension-v0.6.0.zip`，保留解压后的文件夹，不要只拿出单个文件。
+1. 解压 `WhaleWidget-ChatGPT-Chrome-Extension-v0.7.0.zip`，保留解压后的文件夹，不要只拿出单个文件。
 2. 打开 `chrome://extensions`，开启「开发者模式」，点「加载已解压的扩展程序」。
 3. 选择包含 `manifest.json` 的文件夹，安装后刷新已打开的 ChatGPT 网页。
 4. 点击工具栏中的「小鲸鱼 · ChatGPT 网页完成提醒」→「检查连接」；可点「测试提醒」确认鲸鱼气泡和声音。
 
 ## 安装 Edge
 
-1. 解压 `WhaleWidget-ChatGPT-Edge-Extension-v0.6.0.zip`。
+1. 解压 `WhaleWidget-ChatGPT-Edge-Extension-v0.7.0.zip`。
 2. 打开 `edge://extensions`，开启「开发人员模式」，点「加载解压缩的扩展」。
 3. 选择包含 `manifest.json` 的文件夹，安装后刷新已打开的 ChatGPT 网页。
 4. 点击扩展图标，检查连接并发送测试提醒。
 
-**请保留扩展文件夹。**以「加载已解压」方式安装的扩展从该文件夹运行，移动或删除后浏览器可能无法加载。升级扩展时替换文件夹内容，然后在扩展管理页点「重新加载」，并刷新 ChatGPT 标签页。若网页聊天仍无提醒，扩展弹窗的「网页检测」会显示最近一步状态；可以据此判断是网页未被监听、未识别发送、未识别完成，还是通知鲸鱼失败。0.6.1 桌面版只需更新桌面程序，现有 0.6.0 扩展可继续使用。
+**请保留扩展文件夹。**以「加载已解压」方式安装的扩展从该文件夹运行，移动或删除后浏览器可能无法加载。升级扩展时替换文件夹内容，然后在扩展管理页点「重新加载」，并刷新 ChatGPT 标签页。若网页聊天仍无提醒，扩展弹窗的「网页检测」会显示最近一步状态。升级到 0.7.0 后，Chrome 和 Edge 都要各自点一次「重新加载」。
+
+扩展弹窗显示两款浏览器的今日与本周 6 Pro 次数，并可填写**当前浏览器**的下次每周重置时间。网页仅在模型菜单提供明确的 `datetime` 时才会自动识别；若没有显示，请手动输入。手动时间优先，之后每七天顺延。按「使用自动识别」可清除手动时间。没有设置时间时，次数会继续累计，不会擅自按某个星期日清零。
 
 扩展通过网页的对话结构和“停止生成”按钮判断回复结束，在网页本地比较回复变化；只发送浏览器名称、网页对话标题和本机扩展实例标识到 `127.0.0.1` 的鲸鱼程序，不发送回复正文或上传第三方。标签页地址仅保存在扩展的本机存储中，用于点击气泡时查找原标签页。已关闭标签页、其他设备、后台云端任务及网页改版后的结构不保证提醒。浏览器扩展需要 `chatgpt.com` 页面访问权和本机回环地址访问权。扩展连接的是桌面鲸鱼目前使用的 8788–8797 端口。

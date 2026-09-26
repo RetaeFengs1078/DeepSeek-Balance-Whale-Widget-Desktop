@@ -4,11 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body { width: 245px; margin: 0; padding: 16px; color: #203170; background: #f7faff; font: 13px/1.5 "Microsoft YaHei", sans-serif; }
+    body { width: 285px; margin: 0; padding: 16px; color: #203170; background: #f7faff; font: 13px/1.5 "Microsoft YaHei", sans-serif; }
     h1 { margin: 0 0 8px; font-size: 16px; }
     p { margin: 8px 0; }
     button { margin: 8px 8px 0 0; padding: 6px 9px; border: 1px solid #719bd3; border-radius: 7px; background: white; color: #203170; cursor: pointer; }
     #status { min-height: 20px; color: #486a9d; }
+    h2 { font-size: 14px; margin: 15px 0 5px; }
+    .stat { display: flex; justify-content: space-between; padding: 3px 0; }
+    .note { color: #6b7ba6; font-size: 11px; }
+    input[type="datetime-local"] { width: 100%; box-sizing: border-box; padding: 5px; border: 1px solid #a6bbd9; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -17,6 +21,16 @@
   <p id="status">正在检查连接…</p>
   <p id="diagnostic">网页检测：等待状态…</p>
   <button id="check">检查连接</button><button id="test">测试提醒</button>
+  <h2>6 Pro 提问次数</h2>
+  <div class="stat"><span>Chrome</span><strong id="chrome-count">读取中…</strong></div>
+  <div class="stat"><span>Edge</span><strong id="edge-count">读取中…</strong></div>
+  <p id="reset-status" class="note">每周重置时间：读取中…</p>
+  <label for="reset-time">当前浏览器的下次每周重置时间</label>
+  <input id="reset-time" type="datetime-local">
+  <button id="save-reset">保存时间</button><button id="clear-reset">使用自动识别</button>
+  <p class="note">自动识别仅在网页提供明确时间时生效；否则请手动填写。次数分别记录，按每周重置；每日数据保存在小鲸鱼本地。</p>
+  <h2>今日 Codex 额度消耗</h2>
+  <p id="quota-today">读取中…</p>
   <script src="popup.js"></script>
 </body>
 </html>

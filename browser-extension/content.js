@@ -9,6 +9,53 @@
   let scanTimer = null
   let lastNoticeAt = 0
   let lastStage = ''
+  let armedModel = ''
+  let lastResetSeen = null
+
+  function visible(element) { return !!element && element.getClientRects().length > 0 }
+
+  function selectedModel() {
+    const selectors = [
+      'button[data-testid*="model-switcher" i]',
+      'button[data-testid*="model-selector" i]',
+      'button[aria-label*="model" i]',
+      'header button',
+      'button, [role="button"]',
+    ]
+    for (const selector of selectors) {
+      for (const button of document.querySelectorAll(selector)) {
+        if (!visible(button) || button.closest('[role="menu"], [role="dialog"]')) continue
+        const label = [button.innerText, button.textContent, button.getAttribute('aria-label')].join(' ')
+        if (/(?:^|\s)(?:GPT[-\s]*)?6\s*Pro(?:\s|$)/i.test(label)) return '6 Pro'
+      }
+    }
+    return ''
+  }
+
+  function findResetTime() {
+    for (const menu of document.querySelectorAll('[role="menu"], [role="dialog"], [data-radix-popper-content-wrapper]')) {
+      if (!visible(menu) || !/6\s*Pro/i.test(menu.textContent || '') || !/reset|重置/i.test(menu.textContent || '')) continue
+      for (const element of menu.querySelectorAll('time[datetime], [datetime]')) {
+        let context = element.parentElement
+        let matched = false
+        for (let depth = 0; depth < 3 && context && context !== menu; depth++, context = context.parentElement) {
+          const text = context.textContent || ''
+          if (/6\s*Pro/i.test(text) && /reset|重置/i.test(text)) { matched = true; break }
+        }
+        if (!matched) continue
+        const resetAt = Date.parse(element.getAttribute('datetime') || '')
+        if (Number.isFinite(resetAt) && resetAt > Date.now() && resetAt < Date.now() + 30 * 86400000) return resetAt
+      }
+    }
+    return null
+  }
+
+  function detectResetTime() {
+    const resetAt = findResetTime()
+    if (!resetAt || resetAt === lastResetSeen) return
+    lastResetSeen = resetAt
+    chrome.runtime.sendMessage({ type: 'reset-detected', resetAt }, () => { void chrome.runtime.lastError })
+  }
 
   function diagnose(stage) {
     if (stage === lastStage) return
@@ -27,6 +74,7 @@
 
   function arm() {
     armedAt = Date.now()
+    armedModel = selectedModel()
     diagnose('已检测到发送操作')
   }
 
@@ -85,6 +133,7 @@
 
   function scan() {
     scanTimer = null
+    detectResetTime()
     const now = Date.now()
     const user = lastMessage('user')
     const stop = stopButtonVisible()
@@ -93,6 +142,11 @@
       if (user && armedAt && now - armedAt < 10000) {
         startPending(user, now)
         diagnose('已检测到新提问')
+        if (armedModel === '6 Pro') {
+          chrome.runtime.sendMessage({ type: 'question', id: crypto.randomUUID(), model: '6 Pro' }, () => { void chrome.runtime.lastError })
+        } else diagnose('新提问已检测到，但当前模型不是 6 Pro 或无法识别')
+        armedAt = 0
+        armedModel = ''
       } else if (pending && user) {
         // ChatGPT 重新渲染消息节点时，继续跟踪同一轮回复。
         pending.user = user
