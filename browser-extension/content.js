@@ -76,7 +76,7 @@
     lastNoticeAt = Date.now()
     pending = null
     diagnose('已检测到回复完成，正在通知鲸鱼')
-    chrome.runtime.sendMessage({ type: 'completion', conversation: conversationTitle() }, result => {
+    chrome.runtime.sendMessage({ type: 'completion', conversation: conversationTitle(), url: location.href }, result => {
       diagnose(chrome.runtime.lastError || !result || !result.ok
         ? '已检测到完成，但发送给鲸鱼失败'
         : '网页完成提醒已送达鲸鱼')

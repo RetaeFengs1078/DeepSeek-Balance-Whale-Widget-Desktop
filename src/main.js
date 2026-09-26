@@ -13,6 +13,7 @@ const { spawn, spawnSync } = require('node:child_process')
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage } = require('electron')
 const { windowShape } = require('./window-shape.js')
 const { compactBounds } = require('./window-layout.js')
+const { focusExistingWindow } = require('./focus-existing-window.js')
 
 const APP_ROOT = path.join(__dirname, '..')
 
@@ -374,6 +375,14 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
 ipcMain.handle('whale:open-sounds', () => {
   if (soundsDirPath) shell.openPath(soundsDirPath)
   return !!soundsDirPath
+})
+
+ipcMain.handle('whale:completion:activate', async (_event, id) => {
+  if (!serverRef || typeof serverRef.activateCompletion !== 'function') return false
+  const target = serverRef.activateCompletion(id)
+  if (!target.ok) return false
+  if (target.kind === 'browser') return true
+  return focusExistingWindow(target.app, target.host)
 })
 
 function createTray(configPath) {

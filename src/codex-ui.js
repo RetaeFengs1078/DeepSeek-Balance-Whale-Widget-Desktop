@@ -48,6 +48,7 @@
   var knownCompletions = {}
   var completionReady = false
   var showingCompletion = false
+  var activeCompletion = null
   var remoteStatus = null
   function showNextCompletion() {
     if (showingCompletion || !completionQueue.length) return
@@ -57,12 +58,19 @@
     }
     showingCompletion = true
     var event = completionQueue.shift()
+    activeCompletion = event
     window.whaleShowCompletion(event)
     setTimeout(function () {
       showingCompletion = false
+      if (activeCompletion === event) activeCompletion = null
       setTimeout(showNextCompletion, 200)
     }, 8500)
   }
+  document.addEventListener('click', function (click) {
+    if (!activeCompletion || !window.__whale || !window.__whale.activateCompletion) return
+    if (!click.target || !click.target.closest || !click.target.closest('.dshwv-bubble.dshwv-completion-open')) return
+    window.__whale.activateCompletion(activeCompletion.id).catch(function () {})
+  }, true)
   function refreshCompletions() {
     fetch('/whale/completions.json', { cache: 'no-store' })
       .then(function (response) { return response.json() })

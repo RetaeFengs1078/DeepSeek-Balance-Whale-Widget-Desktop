@@ -4,6 +4,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { BrowserCompletionStore, isExtensionOrigin } from '../src/browser-completions.mjs'
+import { randomUUID } from 'node:crypto'
 import { startServer } from '../server.mjs'
 
 test('只接受浏览器扩展来源，网页不能直接伪造提醒', () => {
@@ -46,12 +47,14 @@ test('扩展事件进入鲸鱼原有完成提醒队列', async () => {
     assert.equal(denied.status, 403)
     const accepted = await fetch(base + '/whale/browser-completion', {
       method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', 'X-Whale-Bridge': '1' },
-      body: JSON.stringify({ id: 'accepted-event', browser: 'Chrome', conversation: '网页回复测试' }),
+      body: JSON.stringify({ id: 'accepted-event', browser: 'Chrome', conversation: '网页回复测试', clientId: randomUUID() }),
     })
     assert.equal(accepted.status, 200)
     assert.equal(accepted.headers.get('access-control-allow-origin'), origin)
     const completions = await (await fetch(base + '/whale/completions.json')).json()
     assert.ok(completions.events.some(item => item.id === 'web:accepted-event' && item.conversation === '网页回复测试'))
+    assert.deepEqual(server.activateCompletion('web:accepted-event'), { ok: true, kind: 'browser' })
+    assert.deepEqual(server.activateCompletion('web:missing'), { ok: false, kind: 'browser' })
   } finally {
     server?.shutdown()
     await fs.rm(fixture, { recursive: true, force: true })

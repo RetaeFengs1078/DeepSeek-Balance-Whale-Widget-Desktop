@@ -7,9 +7,10 @@ export class BrowserCompletionStore {
   constructor() {
     this.events = []
     this.ids = new Set()
+    this.targets = new Map()
   }
 
-  add(payload) {
+  add(payload, origin = '') {
     if (!payload || typeof payload !== 'object') return null
     const id = typeof payload.id === 'string' ? payload.id.slice(0, 100) : ''
     if (!/^[a-zA-Z0-9:_-]{8,100}$/.test(id) || this.ids.has(id)) return null
@@ -26,10 +27,16 @@ export class BrowserCompletionStore {
     }
     this.events.push(event)
     this.ids.add(id)
+    if (isExtensionOrigin(origin) && /^[a-f0-9-]{36}$/i.test(payload.clientId || '')) {
+      this.targets.set(event.id, { origin, clientId: payload.clientId })
+    }
     while (this.events.length > 30) {
       const old = this.events.shift()
       this.ids.delete(old.id.slice(4))
+      this.targets.delete(old.id)
     }
     return event
   }
+
+  target(id) { return this.targets.get(id) || null }
 }

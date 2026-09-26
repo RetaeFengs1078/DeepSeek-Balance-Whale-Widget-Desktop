@@ -12,6 +12,7 @@ import { CodexReader } from './src/codex-reader.mjs'
 import { CodexCompletionReader } from './src/codex-completions.mjs'
 import { RemoteCompletionReader } from './src/remote-completions.mjs'
 import { BrowserCompletionStore, isExtensionOrigin } from './src/browser-completions.mjs'
+import { BrowserActionBridge } from './src/browser-actions.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 
@@ -77,6 +78,7 @@ export async function startServer(opts = {}) {
   const codexReader = new CodexReader()
   const completionReader = new CodexCompletionReader()
   const browserCompletions = new BrowserCompletionStore()
+  const browserActions = new BrowserActionBridge()
   await completionReader.refresh() // 启动前的旧事件只作基线，不弹历史通知。
   const configuredHosts = fileCfg.CODEX_REMOTE_SSH_HOSTS ?? process.env.CODEX_REMOTE_SSH_HOSTS ?? ['gpu-5', 'gpu-7']
   const remoteHosts = Array.isArray(configuredHosts) ? configuredHosts : String(configuredHosts).split(',').map((host) => host.trim()).filter(Boolean)
@@ -313,7 +315,7 @@ export async function startServer(opts = {}) {
         })
         req.on('end', () => {
           let item = null
-          try { item = browserCompletions.add(JSON.parse(body)) } catch {}
+          try { item = browserCompletions.add(JSON.parse(body), origin) } catch {}
           res.writeHead(item ? 200 : 400, { ...headers, 'Content-Type': 'application/json; charset=utf-8' })
           res.end(JSON.stringify({ ok: !!item }))
         })
@@ -400,6 +402,24 @@ export async function startServer(opts = {}) {
 
     send(res, 404, 'not found')
   })
+  browserActions.attach(server)
+
+  function activateCompletion(id) {
+    if (typeof id !== 'string' || id.length > 150) return { ok: false }
+    if (id.startsWith('web:')) {
+      const target = browserCompletions.target(id)
+      return { ok: !!target && browserActions.open(target.origin, target.clientId, id), kind: 'browser' }
+    }
+    const item = [...completionReader.events, ...remoteReader.events].find((event) => event.id === id)
+    if (!item) return { ok: false }
+    if (item.source === 'Codex 客户端') return { ok: true, kind: 'app', app: 'ChatGPT' }
+    if (item.source === 'VS Code Codex') return { ok: true, kind: 'app', app: 'Code' }
+    if (item.source.startsWith('VS Code Remote SSH · ')) {
+      return { ok: true, kind: 'app', app: 'Code', host: item.source.slice('VS Code Remote SSH · '.length) }
+    }
+    if (item.source === 'Codex 命令行') return { ok: true, kind: 'app', app: 'Terminal' }
+    return { ok: false }
+  }
 
   // 端口被占用（比如浏览器模式已经开着）就顺延，最多试 10 个。
   const host = opts.host || process.env.WHALE_HOST || '127.0.0.1'
@@ -430,12 +450,13 @@ export async function startServer(opts = {}) {
 
   function shutdown() {
     for (const c of cleanups) { try { c() } catch (err) {} }
+    browserActions.close()
     try { server.close() } catch (err) {}
   }
   process.on('SIGINT', () => { shutdown(); process.exit(0) })
   process.on('SIGTERM', () => { shutdown(); process.exit(0) })
 
-  return { port, host, server, dirs, shutdown }
+  return { port, host, server, dirs, shutdown, activateCompletion }
 }
 
 // 直接 node server.mjs 运行时才自动启动；被 import 时不启动。
