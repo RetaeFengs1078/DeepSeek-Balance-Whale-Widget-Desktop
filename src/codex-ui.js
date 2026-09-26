@@ -10,11 +10,13 @@
 
   var panelToggle = null
   var startupToggle = null
+  var appLaunchToggle = null
   function applySettings(settings) {
     var show = !!(settings && settings.showQuotaPanel)
     panel.hidden = !show
     if (panelToggle) panelToggle.checked = show
     if (startupToggle) startupToggle.checked = !!(settings && settings.autoStart)
+    if (appLaunchToggle) appLaunchToggle.checked = !!(settings && settings.launchWithApps)
   }
   if (window.__whale && window.__whale.getSettings) {
     window.__whale.getSettings().then(applySettings).catch(function () {})
@@ -141,6 +143,7 @@
     }
     panelToggle = settingRow('常显额度面板', 'showQuotaPanel')
     startupToggle = settingRow('开机自启动', 'autoStart')
+    appLaunchToggle = settingRow('打开 VS Code/ChatGPT 时启动', 'launchWithApps')
     window.__whale.getSettings().then(applySettings).catch(function () {})
   }, 300)
 

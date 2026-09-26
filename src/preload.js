@@ -11,7 +11,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 // 暴露给页面的能力（页面本身仍是普通网页，nodeIntegration 关闭）：
 //   desktop       —— 「我是桌面透明窗口」标记，页面据此切透明样式
 //   reportState   —— 上报鲸鱼矩形 + 是否强制接管鼠标（拖拽 / 菜单 / 气泡展开）
-//   getSettings   —— 读桌面端设置（置顶、音效包）
+//   getSettings   —— 读桌面端设置（置顶、额度面板、启动方式等）
 //   patchSettings —— 改桌面端设置
 //   openSounds    —— 打开自定义音效文件夹
 contextBridge.exposeInMainWorld('__whale', {

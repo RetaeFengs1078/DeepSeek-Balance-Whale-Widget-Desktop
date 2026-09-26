@@ -1,6 +1,6 @@
 {
   "name": "deepseek-balance-whale-widget-desktop",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
   "description": "DeepSeek 余额小鲸鱼 · 独立桌面透明挂件",
   "license": "MIT",
@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.mjs",
-    "dist": "electron-packager . WhaleWidget --platform=win32 --arch=x64 --out=dist --asar --overwrite --ignore=^/node_modules --ignore=^/dist --ignore=^/chrome-profile --ignore=^/NVIDIA --ignore=^/config\\.json$ --ignore=^/config\\.local\\.json$ --ignore=^/data --ignore=^/sounds"
+    "dist": "electron-packager . WhaleWidget --platform=win32 --arch=x64 --out=dist --asar --overwrite --ignore=^/node_modules --ignore=^/dist --ignore=^/chrome-profile --ignore=^/NVIDIA --ignore=^/config\\.json$ --ignore=^/config\\.local\\.json$ --ignore=^/data --ignore=^/sounds && node scripts/copy-launcher.cjs"
   },
   "devDependencies": {
     "electron": "^44.2.0",

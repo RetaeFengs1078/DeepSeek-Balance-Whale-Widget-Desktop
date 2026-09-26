@@ -9,6 +9,7 @@
 
 const fs = require('node:fs')
 const path = require('node:path')
+const { spawn, spawnSync } = require('node:child_process')
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage } = require('electron')
 
 const APP_ROOT = path.join(__dirname, '..')
@@ -29,6 +30,8 @@ let winPos = [0, 0]
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
 const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false }
 const LOGIN_ITEM_NAME = 'CodexWhaleWidget'
+const APP_LAUNCH_NAME = 'CodexWhaleWidgetOnAppOpen'
+const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 let settingsPath = null
 let soundsDirPath = ''
 let trayRef = null
@@ -75,7 +78,34 @@ function setAutoStart(enabled) {
   return autoStartEnabled()
 }
 
-function currentSettings() { return { ...settings, autoStart: autoStartEnabled() } }
+function watcherScriptPath() { return path.join(path.dirname(process.execPath), 'watch.ps1') }
+function powershellPath() {
+  return path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+}
+function launchWithAppsEnabled() {
+  if (process.platform !== 'win32' || !app.isPackaged || !fs.existsSync(watcherScriptPath())) return false
+  const result = spawnSync('reg.exe', ['query', RUN_KEY, '/v', APP_LAUNCH_NAME], { windowsHide: true })
+  return result.status === 0
+}
+function setLaunchWithApps(enabled) {
+  if (process.platform !== 'win32' || !app.isPackaged) return false
+  const script = watcherScriptPath()
+  if (enabled && !fs.existsSync(script)) return false
+  const args = enabled
+    ? ['add', RUN_KEY, '/v', APP_LAUNCH_NAME, '/t', 'REG_SZ', '/d', `"${powershellPath()}" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "${script}"`, '/f']
+    : ['delete', RUN_KEY, '/v', APP_LAUNCH_NAME, '/f']
+  const result = spawnSync('reg.exe', args, { windowsHide: true })
+  if (result.status !== 0) console.error('[whale] 应用联动启动设置失败:', result.error || result.stderr?.toString())
+  if (enabled && result.status === 0) {
+    const child = spawn(powershellPath(), ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', script], {
+      detached: true, windowsHide: true, stdio: 'ignore',
+    })
+    child.unref()
+  }
+  return launchWithAppsEnabled()
+}
+
+function currentSettings() { return { ...settings, autoStart: autoStartEnabled(), launchWithApps: launchWithAppsEnabled() } }
 function announceSettings() {
   if (win && !win.isDestroyed()) win.webContents.send('whale:settings-updated', currentSettings())
 }
@@ -247,7 +277,14 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (typeof patch.alwaysOnTop === 'boolean') { settings.alwaysOnTop = patch.alwaysOnTop; applyTop() }
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
-  if (typeof patch.autoStart === 'boolean') setAutoStart(patch.autoStart)
+  if (typeof patch.autoStart === 'boolean') {
+    if (patch.autoStart) setLaunchWithApps(false)
+    setAutoStart(patch.autoStart)
+  }
+  if (typeof patch.launchWithApps === 'boolean') {
+    if (patch.launchWithApps) setAutoStart(false)
+    setLaunchWithApps(patch.launchWithApps)
+  }
   saveSettings()
   buildTrayMenu()
   announceSettings()
@@ -295,7 +332,23 @@ function buildTrayMenu() {
     },
     {
       label: '开机自启动', type: 'checkbox', checked: autoStartEnabled(), enabled: app.isPackaged,
-      click: () => { setAutoStart(!autoStartEnabled()); announceSettings(); buildTrayMenu() },
+      click: () => {
+        const enabled = !autoStartEnabled()
+        if (enabled) setLaunchWithApps(false)
+        setAutoStart(enabled)
+        announceSettings()
+        buildTrayMenu()
+      },
+    },
+    {
+      label: '打开 VS Code/ChatGPT 时启动', type: 'checkbox', checked: launchWithAppsEnabled(), enabled: app.isPackaged,
+      click: () => {
+        const enabled = !launchWithAppsEnabled()
+        if (enabled) setAutoStart(false)
+        setLaunchWithApps(enabled)
+        announceSettings()
+        buildTrayMenu()
+      },
     },
     { type: 'separator' },
     { label: '打开音效文件夹', click: () => { if (soundsDirPath) shell.openPath(soundsDirPath) } },

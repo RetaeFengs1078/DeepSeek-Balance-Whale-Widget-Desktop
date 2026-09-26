@@ -9,10 +9,15 @@ $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\CodexWhaleWidget'
 $shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'Codex 额度小鲸鱼.lnk'
 Remove-ItemProperty -Path $runKey -Name CodexWhaleWidget -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path $runKey -Name CodexWhaleWidgetOnAppOpen -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $shortcutPath -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue
 
 $installedExe = Join-Path $expectedRoot 'WhaleWidget.exe'
+$watcherScript = Join-Path $expectedRoot 'watch.ps1'
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -and $_.CommandLine.Contains($watcherScript) } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Get-CimInstance Win32_Process -Filter "Name='WhaleWidget.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.ExecutablePath -and [string]::Equals($_.ExecutablePath, $installedExe, [StringComparison]::OrdinalIgnoreCase) } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }

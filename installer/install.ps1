@@ -11,6 +11,8 @@ if (-not (Test-Path -LiteralPath $sourceExe -PathType Leaf)) { throw '安装包�
 $installRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\CodexWhaleWidget'))
 $installedExe = Join-Path $installRoot 'WhaleWidget.exe'
 $startupName = 'CodexWhaleWidget'
+$watcherName = 'CodexWhaleWidgetOnAppOpen'
+$watcherScript = Join-Path $installRoot 'watch.ps1'
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\CodexWhaleWidget'
 $shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'Codex 额度小鲸鱼.lnk'
@@ -18,10 +20,14 @@ $shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'Codex 额�
 # 更新时先退出旧鲸鱼，避免 Electron 文件仍被占用或单实例锁指向便携版。
 Get-CimInstance Win32_Process -Filter "Name='WhaleWidget.exe'" -ErrorAction SilentlyContinue |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -and $_.CommandLine.Contains($watcherScript) } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
 New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
 Get-ChildItem -LiteralPath $package -Force | Copy-Item -Destination $installRoot -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'uninstall.ps1') -Destination (Join-Path $installRoot 'uninstall.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'watch.ps1') -Destination $watcherScript -Force
 
 # 如果用户曾从便携目录运行，可迁移个人配置；已有的安装配置始终优先。
 if ($MigrateFrom -and (Test-Path -LiteralPath $MigrateFrom -PathType Container)) {
@@ -46,7 +52,7 @@ $uninstallScript = Join-Path $installRoot 'uninstall.ps1'
 $psExe = (Get-Command powershell.exe).Source
 $fields = @{
   DisplayName = 'Codex 额度小鲸鱼'
-  DisplayVersion = '0.2.2'
+  DisplayVersion = '0.3.0'
   InstallLocation = $installRoot
   DisplayIcon = $installedExe
   UninstallString = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"')
@@ -57,9 +63,11 @@ foreach ($key in $fields.Keys) {
 New-ItemProperty -Path $uninstallKey -Name NoModify -Value 1 -PropertyType DWord -Force | Out-Null
 New-ItemProperty -Path $uninstallKey -Name NoRepair -Value 1 -PropertyType DWord -Force | Out-Null
 
-# 与 Electron 托盘开关使用同一个 Run 项，用户可随时从托盘取消。
-New-ItemProperty -Path $runKey -Name $startupName -Value ('"' + $installedExe + '"') -PropertyType String -Force | Out-Null
+# 开机只启动隐藏监听器；打开 VS Code 或 ChatGPT 后才启动鲸鱼。
+Remove-ItemProperty -Path $runKey -Name $startupName -ErrorAction SilentlyContinue
+$watcherCommand = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watcherScript + '"')
+New-ItemProperty -Path $runKey -Name $watcherName -Value $watcherCommand -PropertyType String -Force | Out-Null
 
-Start-Process -FilePath $installedExe -WindowStyle Hidden
+Start-Process -FilePath $psExe -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $watcherScript + '"') -WindowStyle Hidden
 Write-Output "已安装：$installedExe"
-Write-Output '已加入开始菜单、Windows 已安装应用及开机自启动。'
+Write-Output '已加入开始菜单和 Windows 已安装应用；登录后只运行隐藏监听器，打开 VS Code 或 ChatGPT 时启动鲸鱼。'
