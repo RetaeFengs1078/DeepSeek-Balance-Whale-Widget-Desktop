@@ -618,6 +618,7 @@ function showBubble() {
   restoreBubbleLines()
   bubbleBox.classList.add('dshwv-bubble-open')
   positionBubble()
+  if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   if (window.whaleOnBubbleShown) window.whaleOnBubbleShown()
   // 默认展示当前内容；点击气泡切到随机台词段；总时长 5 秒自动关闭
   bubbleTimer = setTimeout(hideBubble, BUBBLE_MS)
@@ -639,7 +640,7 @@ function hideBubble() {
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
   bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
   bubbleBox.title = ''
-  if (window.whaleReportState) window.whaleReportState()
+  if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   if (window.whaleOnBubbleHidden) window.whaleOnBubbleHidden()
   // gif 靠 CSS opacity 过渡淡出；display:none 会跳过过渡，须等淡出完成再隐藏
   gifFadeTimer = setTimeout(function () {
@@ -667,8 +668,8 @@ function showCompletionBubble(event) {
   bubbleBox.classList.remove('dshwv-usage-open', 'dshwv-almanac-open')
   bubbleBox.classList.add('dshwv-completion-open', 'dshwv-bubble-open')
   positionBubble()
+  if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   bubbleTimer = setTimeout(hideBubble, 8500)
-  if (window.whaleReportState) window.whaleReportState()
   playDuckCompletion()
 }
 window.whaleShowCompletion = showCompletionBubble
@@ -708,8 +709,8 @@ function showInfoBubble(info) {
   bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
   bubbleBox.classList.add(info.kind === 'almanac' ? 'dshwv-almanac-open' : 'dshwv-usage-open', 'dshwv-bubble-open')
   positionBubble()
+  if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   bubbleTimer = setTimeout(hideBubble, 8500)
-  if (window.whaleReportState) window.whaleReportState()
 }
 window.whaleShowUsage = function (usage) {
   showInfoBubble({ label: '6 Pro · 重置前已用', amount: usage.counts, hint: usage.resets, kind: 'usage' })
@@ -753,6 +754,7 @@ function showCostBubble(amount) {
   textBox.style.opacity = ''
   bubbleBox.classList.add('dshwv-bubble-open')
   positionBubble()
+  if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   if (turnCostCloseMs > 0) {
     costBubbleTimer = setTimeout(hideCostBubble, turnCostCloseMs)
   }
@@ -865,7 +867,6 @@ function positionBubble() {
   var fittedTop = clamp(wantedTop, 0, Math.max(0, vp.h - bubbleHeight))
   bubbleBox.style.top = (fittedTop - modelTop) + 'px'
   bubbleBox.style.bottom = 'auto'
-  if (window.whaleReportState) window.whaleReportState()
 }
 function settle() {
   var vp = viewport()
@@ -1058,6 +1059,7 @@ function setBubbleScale(value) {
   bubbleScaleInput.value = String(next)
   bubbleScaleNumber.value = String(scaleToDisplay(next))
   positionBubble()
+  if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   saveConfig()
 }
 function setScale(v) {
@@ -1300,15 +1302,14 @@ function positionMenu() {
     // left side → menu bottom-left aligns with the button's top-left
     if (onLeft) {
       menuBox.style.left = b.left + 'px'
-      menuBox.style.right = 'auto'
       menuBox.style.transformOrigin = 'bottom left'
     } else {
-      menuBox.style.right = (window.innerWidth - b.right) + 'px'
-      menuBox.style.left = 'auto'
+      menuBox.style.left = (b.right - menuBox.offsetWidth) + 'px'
       menuBox.style.transformOrigin = 'bottom right'
     }
-    menuBox.style.bottom = (window.innerHeight - b.top) + 'px'
-    menuBox.style.top = 'auto'
+    menuBox.style.right = 'auto'
+    menuBox.style.top = (b.top - menuBox.offsetHeight) + 'px'
+    menuBox.style.bottom = 'auto'
   } catch (err) {}
 }
 

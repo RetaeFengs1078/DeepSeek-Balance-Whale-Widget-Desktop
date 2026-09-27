@@ -25,7 +25,10 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction Silen
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
 New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
-Get-ChildItem -LiteralPath $package -Force | Copy-Item -Destination $installRoot -Recurse -Force
+# 程序目录里可能有便携运行时留下的配置和统计；更新时绝不能覆盖用户数据。
+Get-ChildItem -LiteralPath $package -Force |
+  Where-Object { $_.Name -notin @('data', 'sounds', 'config.json', 'config.local.json', 'chrome-profile') } |
+  Copy-Item -Destination $installRoot -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'uninstall.ps1') -Destination (Join-Path $installRoot 'uninstall.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'watch.ps1') -Destination $watcherScript -Force
 
@@ -65,7 +68,7 @@ $uninstallScript = Join-Path $installRoot 'uninstall.ps1'
 $psExe = (Get-Command powershell.exe).Source
 $fields = @{
   DisplayName = 'Codex 额度小鲸鱼'
-  DisplayVersion = '0.7.5-local.2'
+  DisplayVersion = '0.7.5-local.4'
   InstallLocation = $installRoot
   DisplayIcon = $installedExe
   UninstallString = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"')
