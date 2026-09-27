@@ -9,6 +9,14 @@ sounds/
 chrome-profile/
 *.log
 
+# 私人形象只留在本机；公开仓库默认只保留上游小鲸鱼素材。
+**/skins/
+private-skins/
+*.private.png
+*.private.jpg
+*.private.jpeg
+*.private.webp
+
 # —— 依赖与打包产物（体积巨大，可重建）——
 node_modules/
 dist/
