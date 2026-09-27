@@ -635,9 +635,6 @@ function hideBubble() {
   bubbleRandomLines = null
   bubbleShown = false
   completionActive = false
-  // 展开的大气泡可能带着模型一起向屏幕内避让；关闭后回到原停靠点。
-  root.style.left = (state.left - originX()) + 'px'
-  root.style.top = (state.top - originY()) + 'px'
   // 只销毁 gif 显示；三行文字保持现状让气泡自然淡出——不能在关闭瞬间
   // 恢复成余额内容（否则随机台词界面会闪现余额）。文字恢复交给下次
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
@@ -863,22 +860,20 @@ function positionBubble() {
   var modelLeft = state.left
   var modelTop = state.top
   // 以 SVG 中最下面的小球 (442, 646) 为锚点。相同尺寸时 left/top 均为 0，
-  // 因此大小拆分前后的原始位置完全相同；单独调整气泡大小也不会挪动小球中心。
+  // 因此大小拆分前后的原始位置完全相同；空间足够时小球中心保持不动。
   var localLeft = (modelWidth - bubbleWidth) * (442 / 1026)
   var localTop = (modelWidth - bubbleWidth) * (646 / 1026)
   var wantedLeft = state.h === 'left'
     ? modelLeft + modelWidth - localLeft - bubbleWidth
     : modelLeft + localLeft
   var fittedLeft = clamp(wantedLeft, 0, Math.max(0, vp.w - bubbleWidth))
-  bubbleBox.style.left = localLeft + 'px'
+  // 屏幕边缘只移动气泡，绝不移动吸附在边缘的鲸鱼。
+  bubbleBox.style.left = (localLeft + (state.h === 'left' ? -1 : 1) * (fittedLeft - wantedLeft)) + 'px'
   bubbleBox.style.right = 'auto'
   var wantedTop = modelTop + localTop
   var fittedTop = clamp(wantedTop, 0, Math.max(0, vp.h - bubbleHeight))
-  bubbleBox.style.top = localTop + 'px'
+  bubbleBox.style.top = (fittedTop - modelTop) + 'px'
   bubbleBox.style.bottom = 'auto'
-  // 屏幕边缘空间不足时连同模型一起平移，保持小球相对模型的锚点不变。
-  root.style.left = (state.left + fittedLeft - wantedLeft - originX()) + 'px'
-  root.style.top = (state.top + fittedTop - wantedTop - originY()) + 'px'
 }
 function settle() {
   var vp = viewport()
