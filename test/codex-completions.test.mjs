@@ -9,10 +9,9 @@ function record(type, payload, timestamp = '2026-09-26T08:00:00.000Z') {
   return JSON.stringify({ timestamp, type, payload }) + '\n'
 }
 
-test('按 originator 区分本机客户端、VS Code 与远端', () => {
+test('按 originator 区分本机客户端与 VS Code', () => {
   assert.equal(sourceLabel({ originator: 'codex_work_desktop', source: 'vscode' }), 'Codex 客户端')
   assert.equal(sourceLabel({ originator: 'codex_vscode', source: 'vscode' }), 'VS Code Codex')
-  assert.equal(sourceLabel({ originator: 'codex_vscode' }, 'gpu-5'), 'VS Code Remote SSH · gpu-5')
 })
 
 test('只识别用户会话的完成事件', () => {

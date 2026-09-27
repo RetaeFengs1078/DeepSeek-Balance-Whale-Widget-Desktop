@@ -223,7 +223,6 @@
     return Promise.allSettled([
       fetch('/whale/codex.json', { cache: 'no-store' }).then(function (r) { return r.json() }),
       fetch('/whale/usage', { cache: 'no-store' }).then(function (r) { return r.json() }),
-      fetch('/whale/completions.json', { cache: 'no-store' }).then(function (r) { return r.json() }),
     ]).then(function (results) {
       var quota = results[0].status === 'fulfilled' ? results[0].value : null
       var windows = quota && quota.windows || {}
@@ -241,10 +240,6 @@
           '6 Pro Edge：今日 ' + (edge.today || 0) + ' 次 · 本周 ' + (edge.weekly || 0) + ' 次\n' +
           '今日 Codex 额度消耗：5 小时 ' + percent(spent.fiveHour && spent.fiveHour.usedPercent || 0) + ' · 每周 ' + percent(spent.weekly && spent.weekly.usedPercent || 0)
       } else byId('usage-summary').textContent = '网页统计暂不可用'
-      var completions = results[2].status === 'fulfilled' ? results[2].value : null
-      var hosts = completions && completions.remoteHosts || {}
-      var names = Object.keys(hosts)
-      byId('remote-summary').textContent = names.length ? '远端：' + names.map(function (host) { return host + ' ' + hosts[host] }).join('；') : '远端：未配置'
       setStatus('refresh-status', '已更新')
     })
   }

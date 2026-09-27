@@ -65,7 +65,7 @@ test('额度只累加相邻小时同周期的正差值，跳过换号、重置�
 test('网页不能提交计数，扩展提交后可读取持久统计', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'whale-usage-api-'))
   const configPath = path.join(root, 'config.json')
-  await fs.writeFile(configPath, JSON.stringify({ CODEX_REMOTE_SSH_HOSTS: [] }))
+  await fs.writeFile(configPath, '{}')
   let server
   try {
     server = await startServer({ configPath, dataDir: path.join(root, 'data'), port: 8894 })

@@ -11,7 +11,7 @@ test('私人照片皮肤只从本地数据目录读取，原版始终可选', as
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'whale-skin-test-'))
   const dataDir = path.join(root, 'data')
   const configPath = path.join(root, 'config.json')
-  await fs.writeFile(configPath, JSON.stringify({ CODEX_REMOTE_SSH_HOSTS: [] }))
+  await fs.writeFile(configPath, '{}')
   let server
   try {
     server = await startServer({ configPath, dataDir, port: 8897 })

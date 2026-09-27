@@ -55,9 +55,6 @@ foreach ($process in $processes) { $pids[[uint32]$process.Id] = $true }
 $windows = @([WhaleWindowFocus]::ListWindows() | Where-Object { $pids.ContainsKey([uint32]$_.ProcessId) })
 if (-not $windows.Count) { exit 3 }
 $selected = $null
-if ($Kind -eq 'Code' -and $HostName) {
-  $selected = $windows | Where-Object { $_.Title -match [regex]::Escape($HostName) } | Select-Object -First 1
-}
 if (-not $selected) { $selected = $windows | Select-Object -First 1 }
 $handle = [IntPtr]$selected.Handle
 [void][WhaleWindowFocus]::ShowWindowAsync($handle, 9)
@@ -79,10 +76,9 @@ if ([WhaleWindowFocus]::GetForegroundWindow() -eq $handle) { exit 0 }
 exit 4
 `
 
-function focusExistingWindow(kind, host = '') {
+function focusExistingWindow(kind) {
   if (process.platform !== 'win32' || !['ChatGPT', 'Code', 'Terminal'].includes(kind)) return Promise.resolve(false)
-  if (host && !/^[a-zA-Z0-9_.-]+$/.test(host)) return Promise.resolve(false)
-  const script = '$Kind = ' + JSON.stringify(kind) + '\n$HostName = ' + JSON.stringify(host) + '\n' + FOCUS_SCRIPT
+  const script = '$Kind = ' + JSON.stringify(kind) + '\n' + FOCUS_SCRIPT
   const encoded = Buffer.from(script, 'utf16le').toString('base64')
   const executable = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
   return new Promise((resolve) => {

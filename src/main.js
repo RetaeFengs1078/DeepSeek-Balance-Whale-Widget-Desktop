@@ -487,7 +487,7 @@ ipcMain.handle('whale:completion:activate', async (_event, id) => {
   const target = serverRef.activateCompletion(id)
   if (!target.ok) return false
   if (target.kind === 'browser') return true
-  return focusExistingWindow(target.app, target.host)
+  return focusExistingWindow(target.app)
 })
 
 ipcMain.handle('whale:email:password', (event, password) => {

@@ -7,9 +7,7 @@ import { codexHome } from './codex-reader.mjs'
 const MAX_LINE_BYTES = 4 * 1024 * 1024
 const MAX_EVENTS = 30
 
-export function sourceLabel(meta, remoteHost = '') {
-  if (remoteHost) return meta?.originator === 'codex_vscode'
-    ? `VS Code Remote SSH · ${remoteHost}` : `远端 Codex · ${remoteHost}`
+export function sourceLabel(meta) {
   if (meta?.originator === 'codex_work_desktop') return 'Codex 客户端'
   if (meta?.originator === 'codex_vscode') return 'VS Code Codex'
   if (meta?.source === 'cli' || meta?.originator === 'codex-tui') return 'Codex 命令行'

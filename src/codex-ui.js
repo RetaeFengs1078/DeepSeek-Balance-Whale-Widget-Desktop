@@ -58,7 +58,6 @@
   var completionReady = false
   var showingCompletion = false
   var activeCompletion = null
-  var remoteStatus = null
   var usageStatus = null
   var latestUsage = null
   var latestAlmanac = null
@@ -94,11 +93,6 @@
       .then(function (response) { return response.json() })
       .then(function (data) {
         if (!data || !data.ok) return
-        if (remoteStatus) {
-          var hosts = data.remoteHosts || {}
-          var names = Object.keys(hosts)
-          remoteStatus.textContent = names.length ? '远端：' + names.map(function (host) { return host + ' ' + hosts[host] }).join('；') : '远端：未配置'
-        }
         var events = data.events || []
         for (var i = 0; i < events.length; i++) {
           var item = events[i]

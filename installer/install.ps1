@@ -58,6 +58,19 @@ if ($MigrateFrom -and (Test-Path -LiteralPath $MigrateFrom -PathType Container))
   }
 }
 
+# 旧版留下的远端主机列表不再使用；只删这一项，保留其余个人配置。
+$runtimeConfig = Join-Path $installRoot 'config.json'
+if (Test-Path -LiteralPath $runtimeConfig -PathType Leaf) {
+  try {
+    $configObject = Get-Content -LiteralPath $runtimeConfig -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($configObject -and $configObject.PSObject.Properties['CODEX_REMOTE_SSH_HOSTS']) {
+      $configObject.PSObject.Properties.Remove('CODEX_REMOTE_SSH_HOSTS')
+      $updatedConfig = $configObject | ConvertTo-Json -Depth 100
+      [IO.File]::WriteAllText($runtimeConfig, $updatedConfig + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
+    }
+  } catch { Write-Warning '旧远端主机配置无法清理；新版程序仍会忽略它。' }
+}
+
 $link = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcutPath)
 $link.TargetPath = $installedExe
 $link.WorkingDirectory = $installRoot
@@ -70,7 +83,7 @@ $uninstallScript = Join-Path $installRoot 'uninstall.ps1'
 $psExe = (Get-Command powershell.exe).Source
 $fields = @{
   DisplayName = 'Codex 额度小鲸鱼'
-  DisplayVersion = '0.7.5-local.10'
+  DisplayVersion = '0.7.5-local.11'
   InstallLocation = $installRoot
   DisplayIcon = $installedIcon
   UninstallString = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"')

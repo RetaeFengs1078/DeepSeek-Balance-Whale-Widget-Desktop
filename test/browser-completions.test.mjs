@@ -25,7 +25,7 @@ test('网页完成事件有来源、标题并去重', () => {
 test('扩展事件进入鲸鱼原有完成提醒队列', async () => {
   const fixture = await fs.mkdtemp(path.join(os.tmpdir(), 'whale-browser-test-'))
   const configPath = path.join(fixture, 'config.json')
-  await fs.writeFile(configPath, JSON.stringify({ CODEX_REMOTE_SSH_HOSTS: [] }))
+  await fs.writeFile(configPath, '{}')
   let server
   try {
     server = await startServer({ configPath, dataDir: path.join(fixture, 'data'), port: 8896 })
