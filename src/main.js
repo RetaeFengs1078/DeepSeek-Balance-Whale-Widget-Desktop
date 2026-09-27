@@ -246,6 +246,7 @@ function createWindow() {
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
+    icon: path.join(APP_ROOT, 'assets', 'whale.ico'),
     skipTaskbar: true,
     alwaysOnTop: true,
     focusable: false,
@@ -337,6 +338,7 @@ function openSettingsWindow() {
   settingsWin = new BrowserWindow({
     width: 760, height: 740, minWidth: 600, minHeight: 520,
     frame: false, show: false, backgroundColor: '#f5f7fd',
+    icon: path.join(APP_ROOT, 'assets', 'whale.ico'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'settings-preload.js'),

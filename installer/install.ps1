@@ -7,9 +7,11 @@ $ErrorActionPreference = 'Stop'
 $package = (Resolve-Path -LiteralPath $PackageDir).Path
 $sourceExe = Join-Path $package 'WhaleWidget.exe'
 if (-not (Test-Path -LiteralPath $sourceExe -PathType Leaf)) { throw '安装包缺少 WhaleWidget.exe' }
+if (-not (Test-Path -LiteralPath (Join-Path $package 'whale.ico') -PathType Leaf)) { throw '安装包缺少小鲸鱼图标' }
 
 $installRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\CodexWhaleWidget'))
 $installedExe = Join-Path $installRoot 'WhaleWidget.exe'
+$installedIcon = Join-Path $installRoot 'whale.ico'
 $startupName = 'CodexWhaleWidget'
 $watcherName = 'CodexWhaleWidgetOnAppOpen'
 $watcherScript = Join-Path $installRoot 'watch.ps1'
@@ -59,7 +61,7 @@ if ($MigrateFrom -and (Test-Path -LiteralPath $MigrateFrom -PathType Container))
 $link = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcutPath)
 $link.TargetPath = $installedExe
 $link.WorkingDirectory = $installRoot
-$link.IconLocation = "$installedExe,0"
+$link.IconLocation = $installedIcon
 $link.Description = 'Codex 额度小鲸鱼'
 $link.Save()
 
@@ -68,9 +70,9 @@ $uninstallScript = Join-Path $installRoot 'uninstall.ps1'
 $psExe = (Get-Command powershell.exe).Source
 $fields = @{
   DisplayName = 'Codex 额度小鲸鱼'
-  DisplayVersion = '0.7.5-local.9'
+  DisplayVersion = '0.7.5-local.10'
   InstallLocation = $installRoot
-  DisplayIcon = $installedExe
+  DisplayIcon = $installedIcon
   UninstallString = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"')
 }
 foreach ($key in $fields.Keys) {

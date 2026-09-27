@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 
-test('Git 跟踪的图像仅包含原有小鲸鱼素材', (t) => {
+test('Git 跟踪的图像仅包含原有小鲸鱼素材及其应用图标', (t) => {
   let tracked
   try {
     tracked = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean)
@@ -11,6 +11,7 @@ test('Git 跟踪的图像仅包含原有小鲸鱼素材', (t) => {
     return
   }
   const allowed = new Set([
+    'assets/whale.ico',
     'vendor/dsh-whale-widget/assets/DSH2.png',
     'vendor/dsh-whale-widget/assets/DSniang02.png',
     'vendor/dsh-whale-widget/assets/DSniang1.png',
