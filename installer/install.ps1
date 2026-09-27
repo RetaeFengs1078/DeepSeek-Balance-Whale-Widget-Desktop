@@ -68,7 +68,7 @@ $uninstallScript = Join-Path $installRoot 'uninstall.ps1'
 $psExe = (Get-Command powershell.exe).Source
 $fields = @{
   DisplayName = 'Codex 额度小鲸鱼'
-  DisplayVersion = '0.7.5-local.8'
+  DisplayVersion = '0.7.5-local.9'
   InstallLocation = $installRoot
   DisplayIcon = $installedExe
   UninstallString = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"')
@@ -83,6 +83,8 @@ New-ItemProperty -Path $uninstallKey -Name NoRepair -Value 1 -PropertyType DWord
 Remove-ItemProperty -Path $runKey -Name $watcherName -ErrorAction SilentlyContinue
 New-ItemProperty -Path $runKey -Name $startupName -Value ('"' + $installedExe + '"') -PropertyType String -Force | Out-Null
 
-Start-Process -FilePath $installedExe -WorkingDirectory $installRoot
+# 通过现有 Explorer 桌面进程启动，避免安装器由 Codex 等宿主调用时，
+# 鲸鱼继承宿主的 Job Object 并在宿主退出时被一同终止。
+Start-Process -FilePath explorer.exe -ArgumentList ('"' + $installedExe + '"') -WindowStyle Hidden
 Write-Output "已安装：$installedExe"
 Write-Output '已加入开始菜单和 Windows 已安装应用；登录 Windows 后小鲸鱼自动启动。'
