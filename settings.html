@@ -87,6 +87,15 @@
       <div class="row"><label for="turn-cost-seconds">自动关闭</label><div class="inline"><input id="turn-cost-seconds" type="number" min="0" max="600" step="1"><span class="muted">秒；0 表示手动关闭</span></div></div>
     </section>
 
+    <section aria-labelledby="phone-title">
+      <h2 id="phone-title">iPhone 完成提醒</h2>
+      <p class="description">使用免费的 ntfy 服务。在 iPhone 安装 ntfy，添加下方的专属主题。提醒会经过 ntfy 的服务器；主题地址不要公开分享。</p>
+      <div class="row"><label for="phone-enabled">发送到 iPhone</label><input id="phone-enabled" type="checkbox"></div>
+      <div class="row"><label for="phone-title-enabled">包含对话标题</label><input id="phone-title-enabled" type="checkbox"></div>
+      <div class="row"><span class="caption">手机订阅主题</span><div class="inline"><code id="phone-topic" class="muted">开启后生成</code><button class="action" id="phone-copy" type="button">复制地址</button></div></div>
+      <div class="row"><span class="caption">连接测试</span><div class="inline"><button class="action" id="phone-test" type="button">发送测试提醒</button><span id="phone-status" class="muted"></span></div></div>
+    </section>
+
     <section aria-labelledby="codex-title">
       <h2 id="codex-title">Codex 额度与网页统计</h2>
       <div class="inline"><button class="action" id="refresh-usage" type="button">立即刷新</button><span id="refresh-status" class="muted"></span></div>

@@ -14,6 +14,7 @@ const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage } = 
 const { windowShape } = require('./window-shape.js')
 const { compactBounds } = require('./window-layout.js')
 const { focusExistingWindow } = require('./focus-existing-window.js')
+const { newTopic, messageForCompletion, publishPhonePush } = require('./phone-push.js')
 
 const APP_ROOT = path.join(__dirname, '..')
 
@@ -69,7 +70,8 @@ function applyWindowShape(regions) {
 // 桌面端自己的设置（跟插件的尺寸配置分开存，互不覆盖）
 //   alwaysOnTop —— 窗口置顶
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
-const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false, skinId: 'default' }
+const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false, skinId: 'default',
+  phonePushEnabled: false, phonePushIncludeTitle: true, phonePushTopic: '' }
 const LOGIN_ITEM_NAME = 'CodexWhaleWidget'
 const APP_LAUNCH_NAME = 'CodexWhaleWidgetOnAppOpen'
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
@@ -98,6 +100,9 @@ function loadSettings() {
         if (typeof parsed.soundSet === 'string') settings.soundSet = parsed.soundSet
         if (typeof parsed.showQuotaPanel === 'boolean') settings.showQuotaPanel = parsed.showQuotaPanel
         if (parsed.skinId === 'default' || parsed.skinId === 'portrait') settings.skinId = parsed.skinId
+        if (typeof parsed.phonePushEnabled === 'boolean') settings.phonePushEnabled = parsed.phonePushEnabled
+        if (typeof parsed.phonePushIncludeTitle === 'boolean') settings.phonePushIncludeTitle = parsed.phonePushIncludeTitle
+        if (/^whale-[a-f0-9]{40}$/.test(parsed.phonePushTopic || '')) settings.phonePushTopic = parsed.phonePushTopic
         return
       }
     } catch (err) { /* 继续试下一个 */ }
@@ -426,6 +431,11 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
   if (patch.skinId === 'default' || patch.skinId === 'portrait') settings.skinId = patch.skinId
+  if (typeof patch.phonePushEnabled === 'boolean') {
+    if (patch.phonePushEnabled && !settings.phonePushTopic) settings.phonePushTopic = newTopic()
+    settings.phonePushEnabled = patch.phonePushEnabled
+  }
+  if (typeof patch.phonePushIncludeTitle === 'boolean') settings.phonePushIncludeTitle = patch.phonePushIncludeTitle
   if (typeof patch.autoStart === 'boolean') {
     if (patch.autoStart) setLaunchWithApps(false)
     setAutoStart(patch.autoStart)
@@ -455,6 +465,25 @@ ipcMain.handle('whale:completion:activate', async (_event, id) => {
   if (!target.ok) return false
   if (target.kind === 'browser') return true
   return focusExistingWindow(target.app, target.host)
+})
+
+const pushedCompletions = new Set()
+ipcMain.on('whale:completion:phone', (event, id) => {
+  if (!win || event.sender !== win.webContents || !settings.phonePushEnabled || !serverRef?.getCompletion) return
+  const completion = serverRef.getCompletion(id)
+  if (!completion || pushedCompletions.has(id)) return
+  pushedCompletions.add(id)
+  if (pushedCompletions.size > 300) pushedCompletions.delete(pushedCompletions.values().next().value)
+  publishPhonePush(settings.phonePushTopic, messageForCompletion(completion, settings.phonePushIncludeTitle))
+    .catch((err) => console.error('[whale] iPhone 提醒失败:', err.message))
+})
+ipcMain.handle('whale:phone:test', async (event) => {
+  if (!settingsWin || event.sender !== settingsWin.webContents) return { ok: false, error: '请从设置窗口测试' }
+  if (!settings.phonePushEnabled) return { ok: false, error: '请先开启 iPhone 提醒' }
+  try {
+    await publishPhonePush(settings.phonePushTopic, '小鲸鱼测试提醒：电脑与 iPhone 已连接')
+    return { ok: true }
+  } catch (err) { return { ok: false, error: err.message } }
 })
 
 function createTray(configPath) {

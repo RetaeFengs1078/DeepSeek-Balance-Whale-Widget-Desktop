@@ -104,7 +104,10 @@
           var item = events[i]
           if (!item || !item.id || knownCompletions[item.id]) continue
           knownCompletions[item.id] = true
-          if (completionReady || Date.now() - item.time < 15000) completionQueue.push(item)
+          if (completionReady || Date.now() - item.time < 15000) {
+            completionQueue.push(item)
+            if (window.__whale && window.__whale.notifyPhoneCompletion) window.__whale.notifyPhoneCompletion(item.id)
+          }
         }
         completionReady = true
         showNextCompletion()

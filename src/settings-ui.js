@@ -33,6 +33,11 @@
     byId('launch-with-apps').disabled = !!desktop.autoStart
     byId('sound-custom').value = desktop.soundSet || ''
     byId('skin-select').value = desktop.skinId || 'default'
+    byId('phone-enabled').checked = !!desktop.phonePushEnabled
+    byId('phone-title-enabled').checked = desktop.phonePushIncludeTitle !== false
+    byId('phone-topic').textContent = desktop.phonePushTopic ? 'https://ntfy.sh/' + desktop.phonePushTopic : '开启后生成'
+    byId('phone-copy').disabled = !desktop.phonePushTopic
+    byId('phone-test').disabled = !desktop.phonePushEnabled
   }
   function renderWidget(next) {
     widget = next || {}
@@ -120,6 +125,23 @@
   bindDesktopCheckbox('always-on-top', 'alwaysOnTop')
   bindDesktopCheckbox('quota-panel', 'showQuotaPanel')
   bindDesktopCheckbox('launch-with-apps', 'launchWithApps')
+  bindDesktopCheckbox('phone-enabled', 'phonePushEnabled')
+  bindDesktopCheckbox('phone-title-enabled', 'phonePushIncludeTitle')
+  byId('phone-copy').addEventListener('click', function () {
+    if (!desktop.phonePushTopic) return
+    navigator.clipboard.writeText('https://ntfy.sh/' + desktop.phonePushTopic)
+      .then(function () { setStatus('phone-status', '地址已复制') })
+      .catch(function () { setStatus('phone-status', '复制失败，请手动选择地址') })
+  })
+  byId('phone-test').addEventListener('click', function () {
+    var button = this
+    button.disabled = true
+    setStatus('phone-status', '正在发送…')
+    bridge.testPhonePush().then(function (result) {
+      setStatus('phone-status', result.ok ? '已发送，请查看 iPhone' : (result.error || '发送失败'))
+    }).catch(function () { setStatus('phone-status', '发送失败，请检查网络') })
+      .finally(function () { button.disabled = !desktop.phonePushEnabled })
+  })
   byId('sound-custom').addEventListener('change', function () { patchDesktop({ soundSet: this.value }) })
   byId('skin-select').addEventListener('change', function () { patchDesktop({ skinId: this.value }) })
   byId('open-sounds').addEventListener('click', function () { bridge.openSounds() })

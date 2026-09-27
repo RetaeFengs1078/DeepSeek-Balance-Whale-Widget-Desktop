@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('__whaleSettings', {
   openSkins: () => ipcRenderer.invoke('whale:open-skins'),
   refreshSkin: () => ipcRenderer.invoke('whale:skin:refresh'),
   reloadWhale: () => ipcRenderer.invoke('whale:widget:reload'),
+  testPhonePush: () => ipcRenderer.invoke('whale:phone:test'),
   close: () => ipcRenderer.invoke('whale:settings:close'),
   minimize: () => ipcRenderer.invoke('whale:settings:minimize'),
 })

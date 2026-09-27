@@ -167,7 +167,18 @@
         }
         // 窗口在系统层面裁剪到鲸鱼及展开的内容，避免整屏透明层影响视频合成。
         include(root)
-        include(bubble)
+        if (bubble) {
+          // 按下/松开时 body 的回弹曲线会短暂超过 100%。使用未变形的
+          // 气泡位置作为固定绘制范围，避免窗口边缘追着动画移动而裁掉顶部。
+          var rr = root.getBoundingClientRect()
+          var bw = bubble.offsetWidth, bh = bubble.offsetHeight
+          var bx = root.classList.contains('dshwv-left')
+            ? rr.right - bubble.offsetLeft - bw : rr.left + bubble.offsetLeft
+          var by = rr.top + bubble.offsetTop
+          var px = Math.max(18, Math.ceil(bw * .12))
+          var py = Math.max(22, Math.ceil(bh * .20))
+          regions.push({ x: bx - px, y: by - py, w: bw + px * 2, h: bh + py * 2 })
+        }
         include(menu)
         var quota = document.getElementById('codex-quota')
         if (quota && !quota.hidden && quota.style.visibility !== 'hidden') include(quota)

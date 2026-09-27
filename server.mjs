@@ -543,7 +543,13 @@ export async function startServer(opts = {}) {
   process.on('SIGINT', () => { shutdown(); process.exit(0) })
   process.on('SIGTERM', () => { shutdown(); process.exit(0) })
 
-  return { port, host, server, dirs, shutdown, activateCompletion }
+  function getCompletion(id) {
+    if (typeof id !== 'string' || id.length > 150) return null
+    return [...completionReader.events, ...remoteReader.events, ...browserCompletions.events]
+      .find((item) => item.id === id) || null
+  }
+
+  return { port, host, server, dirs, shutdown, activateCompletion, getCompletion }
 }
 
 // 直接 node server.mjs 运行时才自动启动；被 import 时不启动。
