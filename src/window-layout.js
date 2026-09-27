@@ -20,4 +20,9 @@ function compactBounds(regions, current, desktop) {
   }
 }
 
-module.exports = { compactBounds }
+function needsBoundsUpdate(current, target) {
+  // Windows 缩放取整会让实际窗口比目标大/小 1 DIP，不能因此无限重排。
+  return ['x', 'y', 'width', 'height'].some((key) => Math.abs(target[key] - current[key]) > 1)
+}
+
+module.exports = { compactBounds, needsBoundsUpdate }

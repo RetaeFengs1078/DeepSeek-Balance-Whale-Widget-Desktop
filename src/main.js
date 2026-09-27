@@ -12,7 +12,7 @@ const path = require('node:path')
 const { spawn, spawnSync } = require('node:child_process')
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage } = require('electron')
 const { windowShape } = require('./window-shape.js')
-const { compactBounds } = require('./window-layout.js')
+const { compactBounds, needsBoundsUpdate } = require('./window-layout.js')
 const { focusExistingWindow } = require('./focus-existing-window.js')
 const { newTopic, messageForCompletion, publishPhonePush } = require('./phone-push.js')
 
@@ -34,7 +34,6 @@ let lastShapeKey = ''
 let focusable = false
 let desktopBounds = null
 let layoutVersion = 0
-let dragStartRect = null
 
 function currentLayout() {
   const b = win && !win.isDestroyed() ? win.getBounds() : desktopBounds
@@ -354,13 +353,12 @@ ipcMain.on('whale:state', (_event, state) => {
   if (!state || state.layoutVersion !== layoutVersion || !win || win.isDestroyed()) return
   const oldBounds = win.getBounds()
   const r = state.rect
-  if (state.dragging && r && !dragStartRect) dragStartRect = { x: oldBounds.x + r.x, y: oldBounds.y + r.y }
-  if (!state.dragging) dragStartRect = null
-  const movedDrag = state.dragging && dragStartRect && r &&
-    Math.hypot(oldBounds.x + r.x - dragStartRect.x, oldBounds.y + r.y - dragStartRect.y) > 6
+  // 展开的气泡会随按压动画改变矩形；只有真实指针移动才能触发拖拽扩窗。
+  const movedDrag = !!state.dragging && !!state.dragMoved
   const target = movedDrag ? desktopBounds : compactBounds(state.regions, oldBounds, desktopBounds)
-  const changed = target.x !== oldBounds.x || target.y !== oldBounds.y ||
-    target.width !== oldBounds.width || target.height !== oldBounds.height
+  // Windows DPI 换算可能把请求的 358 DIP 回报为 359 DIP。容忍 1 DIP，
+  // 否则每次气泡上报都反复 setBounds，造成透明窗口闪白。
+  const changed = needsBoundsUpdate(oldBounds, target)
   if (changed) {
     win.setBounds(target)
     winPos = [target.x, target.y]

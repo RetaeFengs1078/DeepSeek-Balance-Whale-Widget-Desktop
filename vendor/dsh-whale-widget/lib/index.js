@@ -122,7 +122,7 @@ window.__dshWhaleWidget = true
 var MIN_SCALE = 0.3
 var MAX_SCALE = 2.5
 var STEP = 0.1
-var CLICK_SQ = 9
+var CLICK_SQ = 64
 var REFRESH_MS = 60000
 var CHANGE_MS = 900
 var ANIM_MS = 700
@@ -1392,6 +1392,7 @@ function onDocPointerDown(e) {
   // 系统窗口只裁剪到鲸鱼附近；捕获指针保证拖出旧区域时仍可收到移动和松开事件。
   try { if (e.target && e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId) } catch (err) {}
   root.classList.add('dshwv-dragging')
+  root.classList.remove('dshwv-drag-moved')
   pressDown()
   setWidgetCursor('grabbing')
   document.addEventListener('pointermove', onDocPointerMove, true)
@@ -1402,7 +1403,10 @@ function onDocPointerMove(e) {
   if (!drag || !drag.active) return
   var dx = pointerX(e) - drag.startX
   var dy = pointerY(e) - drag.startY
-  if (dx * dx + dy * dy >= CLICK_SQ) drag.moved = true
+  if (dx * dx + dy * dy >= CLICK_SQ) {
+    drag.moved = true
+    root.classList.add('dshwv-drag-moved')
+  }
   // Keep the pre-drag flip orientation while dragging (state.h/v stay as they
   // were); on release endDrag() recomputes the anchors and settle() flips the
   // class with a smooth transition instead of reverting instantly.
@@ -1458,7 +1462,7 @@ function endDrag(e, clickAllowed) {
   document.removeEventListener('pointerup', onDocPointerUp, true)
   document.removeEventListener('pointercancel', onDocPointerCancel, true)
   pressUp()
-  root.classList.remove('dshwv-dragging')
+  root.classList.remove('dshwv-dragging', 'dshwv-drag-moved')
   setWidgetCursor(isWhaleHit(e) ? 'grab' : '')
   if (clickAllowed && !drag.moved) {
     if (!(window.whaleOnTap && window.whaleOnTap())) showBubble()

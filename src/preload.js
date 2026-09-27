@@ -22,8 +22,8 @@ ipcRenderer.on('whale:layout-changed', (_event, next) => {
 //   openSounds    —— 打开自定义音效文件夹
 contextBridge.exposeInMainWorld('__whale', {
   desktop: true,
-  reportState: (rect, menuRect, regions, dragging, menuOpen) => ipcRenderer.send('whale:state', {
-    rect, menuRect, regions, dragging, menuOpen, layoutVersion: layout.version,
+  reportState: (rect, menuRect, regions, dragging, dragMoved, menuOpen) => ipcRenderer.send('whale:state', {
+    rect, menuRect, regions, dragging, dragMoved, menuOpen, layoutVersion: layout.version,
   }),
   getLayout: () => layout,
   onLayoutChanged: (callback) => { if (typeof callback === 'function') layoutListeners.push(callback) },

@@ -144,6 +144,7 @@
         var bubbleOpen = !!document.querySelector('.dshwv-bubble.dshwv-bubble-open')
         var menu = document.querySelector('.dshwv-menu.dshwv-menu-open')
         var dragging = root.classList.contains('dshwv-dragging')
+        var dragMoved = dragging && root.classList.contains('dshwv-drag-moved')
         // 气泡可能比模型大并伸出根节点；命中和系统绘制区域都必须包含它。
         var r = (img || root).getBoundingClientRect()
         var rect = { x: r.left, y: r.top, w: r.width, h: r.height }
@@ -182,14 +183,14 @@
         include(menu)
         var quota = document.getElementById('codex-quota')
         if (quota && !quota.hidden && quota.style.visibility !== 'hidden') include(quota)
-        var key = JSON.stringify([rect, menuRect, dragging, regions].map(function (item) {
+        var key = JSON.stringify([rect, menuRect, dragging, dragMoved, regions].map(function (item) {
           if (Array.isArray(item)) return item.map(function (box) { return [box.x, box.y, box.w, box.h].map(Math.round) })
           if (item && typeof item === 'object') return [item.x, item.y, item.w, item.h].map(Math.round)
           return item
         }))
         if (key === lastKey) return
         lastKey = key
-        window.__whale.reportState(rect, menuRect, regions, dragging, !!menu)
+        window.__whale.reportState(rect, menuRect, regions, dragging, dragMoved, !!menu)
       }
       window.whaleReportState = reportWhaleState
       setInterval(reportWhaleState, 300)
