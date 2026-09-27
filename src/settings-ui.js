@@ -38,6 +38,8 @@
     widget = next || {}
     byId('size-range').value = String(widget.size || 10)
     byId('size-number').value = String(widget.size || 10)
+    byId('bubble-size-range').value = String(widget.bubbleSize || widget.size || 10)
+    byId('bubble-size-number').value = String(widget.bubbleSize || widget.size || 10)
     byId('sound-preset').value = widget.soundSet || 'duck'
     byId('volume-range').value = String(Math.round((widget.volume == null ? .9 : widget.volume) * 100))
     byId('volume-value').textContent = byId('volume-range').value + '%'
@@ -92,6 +94,15 @@
     var value = Math.max(1, Math.min(20, Math.round(Number(this.value) || 1)))
     byId('size-range').value = String(value)
     patchWidget({ size: value })
+  })
+  byId('bubble-size-range').addEventListener('input', function () {
+    byId('bubble-size-number').value = this.value
+    patchWidget({ bubbleSize: Number(this.value) })
+  })
+  byId('bubble-size-number').addEventListener('change', function () {
+    var value = Math.max(1, Math.min(20, Math.round(Number(this.value) || 1)))
+    byId('bubble-size-range').value = String(value)
+    patchWidget({ bubbleSize: value })
   })
   byId('volume-range').addEventListener('input', function () {
     byId('volume-value').textContent = this.value + '%'

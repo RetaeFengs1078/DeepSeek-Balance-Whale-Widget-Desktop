@@ -144,9 +144,16 @@
         var bubbleOpen = !!document.querySelector('.dshwv-bubble.dshwv-bubble-open')
         var menu = document.querySelector('.dshwv-menu.dshwv-menu-open')
         var dragging = root.classList.contains('dshwv-dragging')
-        // 气泡展开时命中区要覆盖整个挂件（气泡在鲸鱼上方），否则只需要鲸鱼本体
-        var r = (bubbleOpen ? root : (img || root)).getBoundingClientRect()
+        // 气泡可能比模型大并伸出根节点；命中和系统绘制区域都必须包含它。
+        var r = (img || root).getBoundingClientRect()
         var rect = { x: r.left, y: r.top, w: r.width, h: r.height }
+        var bubble = bubbleOpen ? document.querySelector('.dshwv-bubble') : null
+        if (bubble) {
+          var br = bubble.getBoundingClientRect()
+          var left = Math.min(rect.x, br.left), top = Math.min(rect.y, br.top)
+          var right = Math.max(rect.x + rect.w, br.right), bottom = Math.max(rect.y + rect.h, br.bottom)
+          rect = { x: left, y: top, w: right - left, h: bottom - top }
+        }
         var menuRect = null
         if (menu) {
           var m = menu.getBoundingClientRect()
@@ -160,6 +167,7 @@
         }
         // 窗口在系统层面裁剪到鲸鱼及展开的内容，避免整屏透明层影响视频合成。
         include(root)
+        include(bubble)
         include(menu)
         var quota = document.getElementById('codex-quota')
         if (quota && !quota.hidden && quota.style.visibility !== 'hidden') include(quota)

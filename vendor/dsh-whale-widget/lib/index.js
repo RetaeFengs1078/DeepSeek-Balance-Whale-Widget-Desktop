@@ -134,12 +134,12 @@ var IMG_URL = '/dsh-whale/image.png?v=2'
 var GIF_URL = '/dsh-whale/rua.gif'
 
 var css = [
-  '.dshwv-root{position:fixed;right:0;bottom:0;--dshw-scale:1;--dshw-base:clamp(122px,calc(min(250px,var(--dshw-viewport-min,min(100vw,100vh)) * 0.28) * var(--dshw-scale)),625px);width:var(--dshw-base);height:var(--dshw-base);pointer-events:none;user-select:none;-webkit-user-select:none;z-index:9999;font-family:inherit;transition:left .16s ease,top .16s ease,transform .3s ease}',
+  '.dshwv-root{position:fixed;right:0;bottom:0;--dshw-scale:1;--dshw-bubble-scale:1;--dshw-base:clamp(122px,calc(min(250px,var(--dshw-viewport-min,min(100vw,100vh)) * 0.28) * var(--dshw-scale)),625px);--dshw-bubble-base:clamp(122px,calc(min(250px,var(--dshw-viewport-min,min(100vw,100vh)) * 0.28) * var(--dshw-bubble-scale)),625px);width:var(--dshw-base);height:var(--dshw-base);pointer-events:none;user-select:none;-webkit-user-select:none;z-index:9999;font-family:inherit;transition:left .16s ease,top .16s ease,transform .3s ease}',
   '.dshwv-root.dshwv-left{transform:scaleX(-1)}',
   '.dshwv-root.dshwv-dragging{cursor:grabbing;transition:none}',
   '.dshwv-body{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:50% 100%;transition:transform .22s cubic-bezier(.34,1.56,.64,1)}',
   '.dshwv-img{position:absolute;right:0;bottom:0;width:59.45%;height:59.45%;display:block;pointer-events:none;-webkit-user-drag:none;user-select:none}',
-  '.dshwv-bubble{position:absolute;left:0;top:0;width:100%;aspect-ratio:1026/700;pointer-events:none;z-index:1;--dshw-u:calc(var(--dshw-base) / 1026)}',
+  '.dshwv-bubble{position:absolute;right:0;bottom:calc(var(--dshw-base) * .3177387914);width:var(--dshw-bubble-base);aspect-ratio:1026/700;pointer-events:none;z-index:1;--dshw-u:calc(var(--dshw-bubble-base) / 1026)}',
   '.dshwv-bubble svg{display:block;width:100%;height:100%;pointer-events:none}',
   '.dshwv-bubble svg path,.dshwv-bubble svg ellipse{pointer-events:none;cursor:pointer}',
   '.dshwv-bubble.dshwv-bubble-open svg path,.dshwv-bubble.dshwv-bubble-open svg ellipse{pointer-events:visiblePainted}',
@@ -242,6 +242,25 @@ scaleNumber.addEventListener('change', function () {
   setScale(s)
   root.style.transition = ''
 })
+var bubbleScaleInput = document.createElement('input')
+bubbleScaleInput.type = 'range'
+bubbleScaleInput.min = String(MIN_SCALE)
+bubbleScaleInput.max = String(MAX_SCALE)
+bubbleScaleInput.step = '0.1'
+bubbleScaleInput.className = 'dshwv-range'
+bubbleScaleInput.value = scaleInput.value
+var bubbleScaleNumber = document.createElement('input')
+bubbleScaleNumber.type = 'number'
+bubbleScaleNumber.min = '1'
+bubbleScaleNumber.max = '20'
+bubbleScaleNumber.step = '1'
+bubbleScaleNumber.className = 'dshwv-number'
+bubbleScaleNumber.value = scaleNumber.value
+bubbleScaleInput.addEventListener('input', function () { setBubbleScale(bubbleScaleInput.value) })
+bubbleScaleNumber.addEventListener('change', function () {
+  var v = Math.max(1, Math.min(20, Math.round(Number(bubbleScaleNumber.value) || 1)))
+  setBubbleScale(displayToScale(v))
+})
 var soundSelect = document.createElement('select')
 soundSelect.className = 'dshwv-sound'
 function soundOpt(value, label) {
@@ -303,9 +322,13 @@ scrollGapInput.title = '避让滚动条的像素宽度，填 0 表示贴边'
 scrollGapInput.addEventListener('input', function () { setScrollGapPx(scrollGapInput.value) })
 scrollGapInput.addEventListener('change', function () { setScrollGapPx(scrollGapInput.value) })
 var row1 = menuRow()
-row1.appendChild(menuLabel('大小'))
+row1.appendChild(menuLabel('模型大小'))
 row1.appendChild(scaleInput)
 row1.appendChild(scaleNumber)
+var bubbleSizeRow = menuRow()
+bubbleSizeRow.appendChild(menuLabel('气泡大小'))
+bubbleSizeRow.appendChild(bubbleScaleInput)
+bubbleSizeRow.appendChild(bubbleScaleNumber)
 var row2 = menuRow()
 row2.appendChild(menuLabel('音效'))
 row2.appendChild(soundSelect)
@@ -348,6 +371,7 @@ row9.appendChild(menuLabel('宽度'))
 row9.appendChild(scrollGapInput)
 row9.appendChild(menuLabel('px'))
 menuBox.appendChild(row1)
+menuBox.appendChild(bubbleSizeRow)
 menuBox.appendChild(row2)
 menuBox.appendChild(row3)
 
@@ -593,6 +617,7 @@ function showBubble() {
   bubbleBox.title = ''
   restoreBubbleLines()
   bubbleBox.classList.add('dshwv-bubble-open')
+  positionBubble()
   if (window.whaleOnBubbleShown) window.whaleOnBubbleShown()
   // 默认展示当前内容；点击气泡切到随机台词段；总时长 5 秒自动关闭
   bubbleTimer = setTimeout(hideBubble, BUBBLE_MS)
@@ -614,6 +639,7 @@ function hideBubble() {
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
   bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
   bubbleBox.title = ''
+  if (window.whaleReportState) window.whaleReportState()
   if (window.whaleOnBubbleHidden) window.whaleOnBubbleHidden()
   // gif 靠 CSS opacity 过渡淡出；display:none 会跳过过渡，须等淡出完成再隐藏
   gifFadeTimer = setTimeout(function () {
@@ -640,6 +666,7 @@ function showCompletionBubble(event) {
   hintEl.style.display = 'none'
   bubbleBox.classList.remove('dshwv-usage-open', 'dshwv-almanac-open')
   bubbleBox.classList.add('dshwv-completion-open', 'dshwv-bubble-open')
+  positionBubble()
   bubbleTimer = setTimeout(hideBubble, 8500)
   if (window.whaleReportState) window.whaleReportState()
   playDuckCompletion()
@@ -680,6 +707,7 @@ function showInfoBubble(info) {
   bubbleBox.title = String(info.title || '')
   bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
   bubbleBox.classList.add(info.kind === 'almanac' ? 'dshwv-almanac-open' : 'dshwv-usage-open', 'dshwv-bubble-open')
+  positionBubble()
   bubbleTimer = setTimeout(hideBubble, 8500)
   if (window.whaleReportState) window.whaleReportState()
 }
@@ -724,6 +752,7 @@ function showCostBubble(amount) {
   textBox.style.transition = ''
   textBox.style.opacity = ''
   bubbleBox.classList.add('dshwv-bubble-open')
+  positionBubble()
   if (turnCostCloseMs > 0) {
     costBubbleTimer = setTimeout(hideCostBubble, turnCostCloseMs)
   }
@@ -818,6 +847,25 @@ function express() {
   root.style.left = (state.left - originX()) + 'px'
   root.style.top = (state.top - originY()) + 'px'
   root.classList.toggle('dshwv-left', state.h === 'left')
+  positionBubble()
+}
+function positionBubble() {
+  if (!bubbleShown) return
+  var r = root.getBoundingClientRect()
+  var vp = viewport()
+  var bubbleWidth = bubbleBox.offsetWidth
+  var bubbleHeight = bubbleBox.offsetHeight
+  var modelLeft = r.left + originX()
+  var modelTop = r.top + originY()
+  var wantedLeft = state.h === 'left' ? modelLeft : modelLeft + r.width - bubbleWidth
+  var fittedLeft = clamp(wantedLeft, 0, Math.max(0, vp.w - bubbleWidth))
+  bubbleBox.style.right = ((state.h === 'left' ? 1 : -1) * (fittedLeft - wantedLeft)) + 'px'
+  // 两者同尺寸时 top 恰好为 0，保持旧版气泡的原始位置。
+  var wantedTop = modelTop + r.height * (700 / 1026) - bubbleHeight
+  var fittedTop = clamp(wantedTop, 0, Math.max(0, vp.h - bubbleHeight))
+  bubbleBox.style.top = (fittedTop - modelTop) + 'px'
+  bubbleBox.style.bottom = 'auto'
+  if (window.whaleReportState) window.whaleReportState()
 }
 function settle() {
   var vp = viewport()
@@ -916,6 +964,7 @@ var soundSet = 'duck'
 var usageMode = 'ledger'
 var peakMode = 'default'
 var bubbleOn = true
+var bubbleScale = Number(scaleInput.value)
 var turnCostOn = true
 var turnCostCloseMs = 5000
 var costBubbleActive = false
@@ -923,7 +972,7 @@ var scrollGapOn = false
 var scrollGapPx = 17
 function saveConfig() {
   try {
-    fetch(SIZE_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scale: state.scale, sound: soundOn, vol: soundVol, soundSet: soundSet, usageMode: usageMode, peakMode: peakMode, bubbleOn: bubbleOn, turnCostOn: turnCostOn, turnCostCloseMs: turnCostCloseMs, scrollGapOn: scrollGapOn, scrollGapPx: scrollGapPx }) })
+    fetch(SIZE_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scale: state.scale, bubbleScale: bubbleScale, sound: soundOn, vol: soundVol, soundSet: soundSet, usageMode: usageMode, peakMode: peakMode, bubbleOn: bubbleOn, turnCostOn: turnCostOn, turnCostCloseMs: turnCostCloseMs, scrollGapOn: scrollGapOn, scrollGapPx: scrollGapPx }) })
     // 锚点位置记忆：记录相对边框的离边距离，窗口 resize 后保持（localStorage）。
     // v:2 = 净距离格式（剥离避让距离），v:1 旧格式含避让距离，恢复时废弃旧格式。
     var vp = viewport()
@@ -998,6 +1047,19 @@ function setScrollGapPx(v) {
 function scaleToDisplay(s) {
   return Math.round((s - MIN_SCALE) / ((MAX_SCALE - MIN_SCALE) / 19)) + 1
 }
+function displayToScale(value) {
+  return MIN_SCALE + (value - 1) * (MAX_SCALE - MIN_SCALE) / 19
+}
+function setBubbleScale(value) {
+  var next = Math.round(Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(value))) * 10) / 10
+  if (!isFinite(next)) return
+  bubbleScale = next
+  root.style.setProperty('--dshw-bubble-scale', String(next))
+  bubbleScaleInput.value = String(next)
+  bubbleScaleNumber.value = String(scaleToDisplay(next))
+  positionBubble()
+  saveConfig()
+}
 function setScale(v) {
   var next = Math.round(Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(v))) * 10) / 10
   // 缩放测量需要 left/top 立即到位：临时禁用过渡（滚轮/数字框路径没有
@@ -1054,7 +1116,7 @@ function setSoundSet(v) {
 }
 function widgetSettingsSnapshot() {
   return {
-    size: scaleToDisplay(state.scale), soundSet: soundSet, volume: soundVol,
+    size: scaleToDisplay(state.scale), bubbleSize: scaleToDisplay(bubbleScale), soundSet: soundSet, volume: soundVol,
     usageMode: usageMode, peakMode: peakMode, bubbleOn: bubbleOn,
     turnCostOn: turnCostOn, turnCostCloseSeconds: Math.round(turnCostCloseMs / 1000),
     scrollGapOn: scrollGapOn, scrollGapPx: scrollGapPx,
@@ -1065,7 +1127,11 @@ window.whalePatchWidgetSettings = function (patch) {
   if (!patch || typeof patch !== 'object') return widgetSettingsSnapshot()
   if (typeof patch.size === 'number' && isFinite(patch.size)) {
     var size = Math.max(1, Math.min(20, Math.round(patch.size)))
-    setScale(MIN_SCALE + (size - 1) * (MAX_SCALE - MIN_SCALE) / 19)
+    setScale(displayToScale(size))
+  }
+  if (typeof patch.bubbleSize === 'number' && isFinite(patch.bubbleSize)) {
+    var bubbleSize = Math.max(1, Math.min(20, Math.round(patch.bubbleSize)))
+    setBubbleScale(displayToScale(bubbleSize))
   }
   if (patch.soundSet === 'duck' || patch.soundSet === 'fx1') setSoundSet(patch.soundSet)
   if (typeof patch.volume === 'number' && isFinite(patch.volume)) setVol(patch.volume)
@@ -1489,6 +1555,13 @@ fetch(SIZE_URL, { cache: 'no-store' })
       scaleInput.value = String(d.scale)
       scaleNumber.value = String(scaleToDisplay(d.scale))
       settle()
+    }
+    if (d && typeof d.scale === 'number') {
+      // 旧配置只有 scale；首次升级时保持气泡与模型原有的相同尺寸。
+      bubbleScale = typeof d.bubbleScale === 'number' ? d.bubbleScale : d.scale
+      root.style.setProperty('--dshw-bubble-scale', String(bubbleScale))
+      bubbleScaleInput.value = String(bubbleScale)
+      bubbleScaleNumber.value = String(scaleToDisplay(bubbleScale))
     }
     if (d && typeof d.vol === 'number') {
       soundVol = d.vol
@@ -1952,6 +2025,7 @@ function apply(ctx) {
           if (parsed && typeof parsed.scale === 'number') {
             return {
               scale: parsed.scale,
+              bubbleScale: typeof parsed.bubbleScale === 'number' ? parsed.bubbleScale : parsed.scale,
               sound: parsed.sound !== false,
               vol: typeof parsed.vol === 'number' ? parsed.vol : 0.9,
               soundSet: parsed.soundSet === 'fx1' ? 'fx1' : 'duck',
@@ -1969,7 +2043,7 @@ function apply(ctx) {
       return null
     }
 
-    function writeSizeConfig(scale, sound, vol, soundSet, usageMode, peakMode, bubbleOn, turnCostOn, turnCostCloseMs, scrollGapOn, scrollGapPx) {
+    function writeSizeConfig(scale, bubbleScale, sound, vol, soundSet, usageMode, peakMode, bubbleOn, turnCostOn, turnCostCloseMs, scrollGapOn, scrollGapPx) {
       const um = normalizeUsageMode(usageMode)
       const pm = peakMode === 'liangwen' || peakMode === 'qiangqiang' ? peakMode : 'default'
       const bo = bubbleOn !== false
@@ -1979,6 +2053,7 @@ function apply(ctx) {
       const sgp = typeof scrollGapPx === 'number' && scrollGapPx > 0 ? Math.round(scrollGapPx) : 0
       const body = JSON.stringify({
         scale: scale,
+        bubbleScale: bubbleScale,
         sound: sound !== false,
         vol: typeof vol === 'number' ? vol : 0.9,
         soundSet: soundSet === 'fx1' ? 'fx1' : 'duck',
@@ -1997,6 +2072,7 @@ function apply(ctx) {
           return {
             ok: true,
             scale: scale,
+            bubbleScale: bubbleScale,
             sound: sound !== false,
             vol: typeof vol === 'number' ? vol : 0.9,
             soundSet: soundSet === 'fx1' ? 'fx1' : 'duck',
@@ -2118,7 +2194,9 @@ function apply(ctx) {
                 balanceCache = null
               }
             }
-            const result = writeSizeConfig(scale, parsed.sound !== false, parsed.vol, parsed.soundSet, parsed.usageMode, parsed.peakMode, parsed.bubbleOn, parsed.turnCostOn, parsed.turnCostCloseMs, parsed.scrollGapOn, parsed.scrollGapPx)
+            const bubbleScale = typeof parsed.bubbleScale === 'number' && Number.isFinite(parsed.bubbleScale)
+              ? Math.max(0.3, Math.min(2.5, parsed.bubbleScale)) : scale
+            const result = writeSizeConfig(scale, bubbleScale, parsed.sound !== false, parsed.vol, parsed.soundSet, parsed.usageMode, parsed.peakMode, parsed.bubbleOn, parsed.turnCostOn, parsed.turnCostCloseMs, parsed.scrollGapOn, parsed.scrollGapPx)
             res.writeHead(result.ok ? 200 : 500, JSON_HEADERS)
             res.end(JSON.stringify(result))
           } catch (err) {

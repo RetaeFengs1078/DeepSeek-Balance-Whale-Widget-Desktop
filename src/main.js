@@ -396,7 +396,7 @@ ipcMain.handle('whale:widget:get', () => {
 })
 ipcMain.handle('whale:widget:patch', (_event, patch) => {
   if (!win || win.isDestroyed() || !patch || typeof patch !== 'object') return null
-  const allowed = ['size', 'soundSet', 'volume', 'usageMode', 'peakMode', 'bubbleOn',
+  const allowed = ['size', 'bubbleSize', 'soundSet', 'volume', 'usageMode', 'peakMode', 'bubbleOn',
     'turnCostOn', 'turnCostCloseSeconds', 'scrollGapOn', 'scrollGapPx']
   const safe = {}
   for (const key of allowed) {
