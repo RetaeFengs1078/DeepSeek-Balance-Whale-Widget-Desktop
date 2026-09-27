@@ -388,12 +388,14 @@ bubbleBox.appendChild(textBox)
 bubbleBox.addEventListener('click', function (e) {
   e.stopPropagation()
   if (!bubbleShown) return
-  if (completionActive) { hideBubble(); return }
   if (costBubbleActive) {
     // 消耗金额泡泡：点击关闭（确认）
     hideCostBubble()
     return
   }
+  if (bubbleBox.classList.contains('dshwv-completion-open')) { hideBubble(); return }
+  if (window.whaleOnBubbleClick && window.whaleOnBubbleClick()) return
+  if (completionActive) { hideBubble(); return }
   if (bubbleRandomActive) {
     // 再次点击：关闭
     hideBubble()
@@ -592,9 +594,11 @@ function showBubble() {
   bubbleShown = true
   bubbleRandomActive = false
   completionActive = false
-  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open')
+  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
+  bubbleBox.title = ''
   restoreBubbleLines()
   bubbleBox.classList.add('dshwv-bubble-open')
+  if (window.whaleOnBubbleShown) window.whaleOnBubbleShown()
   // 默认展示当前内容；点击气泡切到随机台词段；总时长 5 秒自动关闭
   bubbleTimer = setTimeout(hideBubble, BUBBLE_MS)
 }
@@ -613,7 +617,9 @@ function hideBubble() {
   // 只销毁 gif 显示；三行文字保持现状让气泡自然淡出——不能在关闭瞬间
   // 恢复成余额内容（否则随机台词界面会闪现余额）。文字恢复交给下次
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
-  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open')
+  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
+  bubbleBox.title = ''
+  if (window.whaleOnBubbleHidden) window.whaleOnBubbleHidden()
   // gif 靠 CSS opacity 过渡淡出；display:none 会跳过过渡，须等淡出完成再隐藏
   gifFadeTimer = setTimeout(function () {
     gifFadeTimer = null
@@ -623,6 +629,7 @@ function hideBubble() {
 
 function showCompletionBubble(event) {
   if (!event) return
+  if (window.whaleOnBubbleHidden) window.whaleOnBubbleHidden()
   if (costBubbleTimer) { clearTimeout(costBubbleTimer); costBubbleTimer = null }
   costBubbleActive = false
   if (bubbleTimer) { clearTimeout(bubbleTimer); bubbleTimer = null }
@@ -636,7 +643,7 @@ function showCompletionBubble(event) {
   labelEl.textContent = String(event.source || 'Codex') + ' · 已完成'
   amountEl.textContent = String(event.conversation || '任务已完成')
   hintEl.style.display = 'none'
-  bubbleBox.classList.remove('dshwv-usage-open')
+  bubbleBox.classList.remove('dshwv-usage-open', 'dshwv-almanac-open')
   bubbleBox.classList.add('dshwv-completion-open', 'dshwv-bubble-open')
   bubbleTimer = setTimeout(hideBubble, 8500)
   if (window.whaleReportState) window.whaleReportState()
@@ -644,8 +651,8 @@ function showCompletionBubble(event) {
 }
 window.whaleShowCompletion = showCompletionBubble
 
-function showUsageBubble(usage) {
-  if (!bubbleOn || !usage) return
+function showInfoBubble(info) {
+  if (!bubbleOn || !info) return
   if (costBubbleTimer) { clearTimeout(costBubbleTimer); costBubbleTimer = null }
   costBubbleActive = false
   if (bubbleTimer) { clearTimeout(bubbleTimer); bubbleTimer = null }
@@ -657,21 +664,29 @@ function showUsageBubble(usage) {
   bubbleRandomActive = false
   bubbleRandomLines = null
   bubbleShown = true
-  labelEl.textContent = '6 Pro · 重置前已用'
-  amountEl.textContent = String(usage.counts || '读取中…')
-  hintEl.textContent = String(usage.resets || '')
-  hintEl.style.display = usage.resets ? '' : 'none'
-  bubbleBox.classList.remove('dshwv-completion-open')
-  bubbleBox.classList.add('dshwv-usage-open', 'dshwv-bubble-open')
+  labelEl.textContent = String(info.label || '')
+  amountEl.textContent = String(info.amount || '读取中…')
+  hintEl.textContent = String(info.hint || '')
+  hintEl.style.display = info.hint ? '' : 'none'
+  bubbleBox.title = String(info.title || '')
+  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
+  bubbleBox.classList.add(info.kind === 'almanac' ? 'dshwv-almanac-open' : 'dshwv-usage-open', 'dshwv-bubble-open')
   bubbleTimer = setTimeout(hideBubble, 8500)
   if (window.whaleReportState) window.whaleReportState()
 }
-window.whaleShowUsage = showUsageBubble
+window.whaleShowUsage = function (usage) {
+  showInfoBubble({ label: '6 Pro · 重置前已用', amount: usage.counts, hint: usage.resets, kind: 'usage' })
+}
+window.whaleShowAlmanac = function (almanac) {
+  showInfoBubble({ label: almanac.label, amount: almanac.yi, hint: almanac.ji, title: almanac.full, kind: 'almanac' })
+}
+window.whaleShowQuota = showBubble
 
 // —— 每轮对话消耗金额泡泡 ——
 var costBubbleTimer = null
 function showCostBubble(amount) {
   if (!bubbleOn || !turnCostOn) return
+  if (window.whaleOnBubbleHidden) window.whaleOnBubbleHidden()
   if (costBubbleTimer) { clearTimeout(costBubbleTimer); costBubbleTimer = null }
   if (bubbleTimer) { clearTimeout(bubbleTimer); bubbleTimer = null }
   if (gifFadeTimer) { clearTimeout(gifFadeTimer); gifFadeTimer = null }

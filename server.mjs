@@ -14,6 +14,7 @@ import { RemoteCompletionReader } from './src/remote-completions.mjs'
 import { BrowserCompletionStore, isExtensionOrigin } from './src/browser-completions.mjs'
 import { BrowserActionBridge } from './src/browser-actions.mjs'
 import { UsageHistory } from './src/usage-history.mjs'
+import { getAlmanac } from './src/almanac.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 
@@ -289,6 +290,11 @@ export async function startServer(opts = {}) {
     try { pathname = new URL(req.url, 'http://localhost').pathname } catch (err) { pathname = '/' }
 
     if (pathname === '/favicon.ico') { res.writeHead(204); res.end(); return }
+    if (pathname === '/whale/almanac' && req.method === 'GET') {
+      res.writeHead(200, JSON_HEADERS)
+      res.end(JSON.stringify(getAlmanac()))
+      return
+    }
     if (pathname === '/whale/usage' || pathname === '/whale/usage/question' || pathname === '/whale/usage/reset') {
       const origin = String(req.headers.origin || '')
       if (origin && !isExtensionOrigin(origin)) { send(res, 403, 'extension origin required'); return }

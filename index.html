@@ -57,14 +57,20 @@
   .dshwv-bubble.dshwv-completion-open .codex-bubble { visibility: hidden; }
   .dshwv-bubble.dshwv-completion-open svg path { cursor: pointer; }
   .dshwv-bubble.dshwv-usage-open .dshwv-text { visibility: visible; width: 76%; white-space: normal; }
-  .dshwv-usage-open .dshwv-label { font-size: calc(var(--dshw-u) * 55); letter-spacing: 0; }
-  .dshwv-usage-open .dshwv-amount { font-size: calc(var(--dshw-u) * 60); line-height: 1.12; white-space: pre-line; }
-  .dshwv-usage-open .dshwv-hint { font-size: calc(var(--dshw-u) * 42); line-height: 1.15; white-space: pre-line;
+  .dshwv-usage-open .dshwv-label { font-size: max(8px, calc(var(--dshw-u) * 55)); letter-spacing: 0; }
+  .dshwv-usage-open .dshwv-amount { font-size: max(8px, calc(var(--dshw-u) * 60)); line-height: 1.12; white-space: pre-line; }
+  .dshwv-usage-open .dshwv-hint { font-size: max(7px, calc(var(--dshw-u) * 42)); line-height: 1.15; white-space: pre-line;
     margin-top: calc(var(--dshw-u) * 6); }
   .dshwv-bubble.dshwv-usage-open .codex-bubble { visibility: hidden; }
+  .dshwv-bubble.dshwv-almanac-open .dshwv-text { visibility: visible; width: 76%; white-space: normal; }
+  .dshwv-almanac-open .dshwv-label { font-size: max(8px, calc(var(--dshw-u) * 53)); letter-spacing: 0; }
+  .dshwv-almanac-open .dshwv-amount { font-size: max(8px, calc(var(--dshw-u) * 56)); line-height: 1.12; overflow-wrap: anywhere; }
+  .dshwv-almanac-open .dshwv-hint { font-size: max(8px, calc(var(--dshw-u) * 53)); line-height: 1.12;
+    margin-top: calc(var(--dshw-u) * 6); overflow-wrap: anywhere; }
+  .dshwv-bubble.dshwv-almanac-open .codex-bubble { visibility: hidden; }
   .codex-bubble { position: absolute; left: 44%; top: 38%;
-    transform: translate(-50%,-50%); color: #536ba9; white-space: nowrap;
-    font-weight: 700; font-size: calc(var(--dshw-u) * 90); pointer-events: none;
+    transform: translate(-50%,-50%); color: #536ba9; white-space: pre-line; text-align: center; line-height: 1.2;
+    font-weight: 700; font-size: max(9px, calc(var(--dshw-u) * 68)); pointer-events: none;
     opacity: 0; transition: opacity .16s ease; }
   html.codex-only .dshwv-bubble-open .codex-bubble {
     opacity: 1; transition: opacity .16s ease .36s;
@@ -76,7 +82,7 @@
   <div class="hint" data-page-node-id="tKUoroHLEdgricsMA0J1yR">
     <b data-page-node-id="6DBhcXlDQHs8YfE13W04Of">Codex 额度小鲸鱼</b><br data-page-node-id="9flLEE0lAu43cJwlEcjzmU">
     每 60 秒自动读取本地会话<br data-page-node-id="Y3bWvCPsNP9OhceSEP25Zl">
-    点鲸鱼：手动刷新 / 双击查看 6 Pro 统计<br data-page-node-id="pkOJz3m5RpRq5T7xuDAjGB">
+    点鲸鱼或气泡：Codex → 6 Pro → 今日宜忌<br data-page-node-id="pkOJz3m5RpRq5T7xuDAjGB">
     悬停右上角：菜单（额度·大小·音效）
   </div>
   <div class="err" id="err" data-page-node-id="V5ZKJfi3OCAJEdhVrs65pS">

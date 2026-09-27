@@ -78,6 +78,11 @@ RetaeFengs1078 的反馈修补。
 五、第三方依赖
 --------------------------------------------------------------------------------
 
+今日黄历计算：vendor/lunar-javascript/（lunar-javascript 1.7.7）
+作者：6tail；项目：https://github.com/6tail/lunar-javascript
+协议：MIT License，完整文本见 vendor/lunar-javascript/LICENSE。
+此库随 Windows 程序分发，在本机计算每日宜忌，不向黄历网站发送数据。
+
 运行时与打包依赖（均不随本仓库分发，通过 npm 安装）：
 
     electron            MIT License    Copyright (c) Electron contributors

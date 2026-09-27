@@ -52,8 +52,10 @@
   var remoteStatus = null
   var usageStatus = null
   var latestUsage = null
-  var lastWhaleTapAt = 0
+  var latestAlmanac = null
+  var bubblePage = -1
   var usageBubbleRequest = 0
+  var almanacBubbleRequest = 0
   // 暂停完成气泡的点击跳转；保留提醒和后端能力，方便以后恢复。
   var completionNavigationEnabled = false
   function showNextCompletion() {
@@ -108,8 +110,10 @@
     content.innerHTML = row('5 小时', windows.fiveHour) + row('每周', windows.weekly)
     var bubble = document.querySelector('.codex-bubble')
     if (bubble) {
-      var summary = windows.fiveHour || windows.weekly
-      bubble.textContent = (windows.fiveHour ? '5 小时' : '每周') + '剩余 ' + pct(summary.remainingPercent)
+      var lines = []
+      if (windows.fiveHour) lines.push('5 小时剩余 ' + pct(windows.fiveHour.remainingPercent))
+      if (windows.weekly) lines.push('每周剩余 ' + pct(windows.weekly.remainingPercent))
+      bubble.textContent = lines.join('\n')
     }
   }
   function refresh() {
@@ -149,22 +153,69 @@
       counts.push(name + '  ' + (Number.isFinite(count) ? Math.max(0, count) : 0) + ' 次')
       resets.push(name + '  ' + (browser.nextResetAt ? resetTime(browser.nextResetAt) : '重置时间未设置'))
     })
+    var chromeReset = data.browsers.Chrome && data.browsers.Chrome.nextResetAt
+    var edgeReset = data.browsers.Edge && data.browsers.Edge.nextResetAt
+    if (chromeReset && chromeReset === edgeReset) resets = ['两端' + resetTime(chromeReset)]
     return { counts: counts.join('\n'), resets: resets.join('\n') }
   }
-  window.whaleOnTap = function () {
-    var now = Date.now()
-    if (now - lastWhaleTapAt > 550) { lastWhaleTapAt = now; return false }
-    lastWhaleTapAt = 0
-    if (typeof window.whaleShowUsage !== 'function') return false
+  function almanacBubbleText(data) {
+    if (!data || !data.ok) return { label: '今日宜忌', yi: '读取中…', ji: '', full: '' }
+    function short(items) {
+      if (!Array.isArray(items) || !items.length) return '无'
+      return items.slice(0, 2).join('、') + (items.length > 2 ? '等' : '')
+    }
+    return {
+      label: data.date.slice(5).replace('-', '/') + ' · 今日宜忌',
+      yi: '宜 ' + short(data.yi),
+      ji: '忌 ' + short(data.ji),
+      full: data.date + ' ' + data.lunar + '\n宜 ' + (data.yi || []).join('、') + '\n忌 ' + (data.ji || []).join('、'),
+    }
+  }
+  function showUsagePage() {
     var request = ++usageBubbleRequest
     window.whaleShowUsage(usageBubbleText(latestUsage))
     refreshUsage().then(function (data) {
       if (request !== usageBubbleRequest) return
+      if (bubblePage !== 1) return
       if (!document.querySelector('.dshwv-bubble-open.dshwv-usage-open')) return
       window.whaleShowUsage(data ? usageBubbleText(data) : { counts: '统计读取失败', resets: '请稍后再试' })
     })
-    return true
   }
+  function showAlmanacPage() {
+    var request = ++almanacBubbleRequest
+    var now = new Date()
+    var today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-')
+    window.whaleShowAlmanac(almanacBubbleText(latestAlmanac && latestAlmanac.date === today ? latestAlmanac : null))
+    fetch('/whale/almanac', { cache: 'no-store' })
+      .then(function (response) { return response.json() })
+      .then(function (data) {
+        if (data && data.ok) latestAlmanac = data
+        if (request !== almanacBubbleRequest || bubblePage !== 2) return
+        if (document.querySelector('.dshwv-bubble-open.dshwv-almanac-open')) {
+          window.whaleShowAlmanac(data && data.ok ? almanacBubbleText(data) : { label: '今日宜忌', yi: '读取失败', ji: '请稍后再试' })
+        }
+      }).catch(function () {
+        if (request === almanacBubbleRequest && bubblePage === 2) {
+          window.whaleShowAlmanac({ label: '今日宜忌', yi: '读取失败', ji: '请稍后再试' })
+        }
+      })
+  }
+  function advanceBubble(fromBubble) {
+    if (bubblePage < 0) return false
+    if (bubblePage === 0) { bubblePage = 1; showUsagePage(); return true }
+    if (bubblePage === 1) { bubblePage = 2; showAlmanacPage(); return true }
+    bubblePage = 0
+    if (fromBubble && window.whaleShowQuota) { window.whaleShowQuota(); return true }
+    return false
+  }
+  window.whaleOnBubbleShown = function () { bubblePage = 0 }
+  window.whaleOnBubbleHidden = function () {
+    bubblePage = -1
+    usageBubbleRequest++
+    almanacBubbleRequest++
+  }
+  window.whaleOnTap = function () { return advanceBubble(false) }
+  window.whaleOnBubbleClick = function () { return advanceBubble(true) }
   window.whaleRefreshCodex = refresh
 
   fetch('/dsh-whale/config', { cache: 'no-store' })
