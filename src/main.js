@@ -10,11 +10,11 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { spawn, spawnSync } = require('node:child_process')
-const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage } = require('electron')
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, shell, nativeImage, safeStorage } = require('electron')
 const { windowShape } = require('./window-shape.js')
 const { compactBounds, needsBoundsUpdate } = require('./window-layout.js')
 const { focusExistingWindow } = require('./focus-existing-window.js')
-const { newTopic, messageForCompletion, publishPhonePush } = require('./phone-push.js')
+const { messageForCompletion, sendSmtpEmail, validateEmailConfig } = require('./email-notify.js')
 
 const APP_ROOT = path.join(__dirname, '..')
 
@@ -70,7 +70,8 @@ function applyWindowShape(regions) {
 //   alwaysOnTop —— 窗口置顶
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
 const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false, skinId: 'default',
-  phonePushEnabled: false, phonePushIncludeTitle: true, phonePushTopic: '' }
+  emailEnabled: false, emailIncludeTitle: true, emailHost: '', emailPort: 465,
+  emailSecurity: 'tls', emailUser: '', emailRecipient: '', emailSecret: '' }
 const LOGIN_ITEM_NAME = 'CodexWhaleWidget'
 const APP_LAUNCH_NAME = 'CodexWhaleWidgetOnAppOpen'
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
@@ -99,9 +100,14 @@ function loadSettings() {
         if (typeof parsed.soundSet === 'string') settings.soundSet = parsed.soundSet
         if (typeof parsed.showQuotaPanel === 'boolean') settings.showQuotaPanel = parsed.showQuotaPanel
         if (parsed.skinId === 'default' || parsed.skinId === 'portrait') settings.skinId = parsed.skinId
-        if (typeof parsed.phonePushEnabled === 'boolean') settings.phonePushEnabled = parsed.phonePushEnabled
-        if (typeof parsed.phonePushIncludeTitle === 'boolean') settings.phonePushIncludeTitle = parsed.phonePushIncludeTitle
-        if (/^whale-[a-f0-9]{40}$/.test(parsed.phonePushTopic || '')) settings.phonePushTopic = parsed.phonePushTopic
+        if (typeof parsed.emailEnabled === 'boolean') settings.emailEnabled = parsed.emailEnabled
+        if (typeof parsed.emailIncludeTitle === 'boolean') settings.emailIncludeTitle = parsed.emailIncludeTitle
+        if (typeof parsed.emailHost === 'string') settings.emailHost = parsed.emailHost.slice(0, 253)
+        if (Number.isInteger(parsed.emailPort)) settings.emailPort = parsed.emailPort
+        if (parsed.emailSecurity === 'tls' || parsed.emailSecurity === 'starttls') settings.emailSecurity = parsed.emailSecurity
+        if (typeof parsed.emailUser === 'string') settings.emailUser = parsed.emailUser.slice(0, 254)
+        if (typeof parsed.emailRecipient === 'string') settings.emailRecipient = parsed.emailRecipient.slice(0, 254)
+        if (typeof parsed.emailSecret === 'string') settings.emailSecret = parsed.emailSecret
         return
       }
     } catch (err) { /* 继续试下一个 */ }
@@ -157,7 +163,17 @@ function setLaunchWithApps(enabled) {
   return launchWithAppsEnabled()
 }
 
-function currentSettings() { return { ...settings, autoStart: autoStartEnabled(), launchWithApps: launchWithAppsEnabled() } }
+function currentSettings() {
+  const { emailSecret, ...publicSettings } = settings
+  return { ...publicSettings, hasEmailPassword: !!emailSecret, autoStart: autoStartEnabled(), launchWithApps: launchWithAppsEnabled() }
+}
+function emailConfig() {
+  if (!settings.emailSecret || !safeStorage.isEncryptionAvailable()) throw new Error('请先在详细设置中保存邮箱授权码')
+  const password = safeStorage.decryptString(Buffer.from(settings.emailSecret, 'base64'))
+  return validateEmailConfig({ host: settings.emailHost, port: settings.emailPort,
+    security: settings.emailSecurity, username: settings.emailUser,
+    recipient: settings.emailRecipient, password })
+}
 function announceSettings() {
   if (win && !win.isDestroyed()) win.webContents.send('whale:settings-updated', currentSettings())
   if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('whale:settings-updated', currentSettings())
@@ -429,11 +445,18 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
   if (patch.skinId === 'default' || patch.skinId === 'portrait') settings.skinId = patch.skinId
-  if (typeof patch.phonePushEnabled === 'boolean') {
-    if (patch.phonePushEnabled && !settings.phonePushTopic) settings.phonePushTopic = newTopic()
-    settings.phonePushEnabled = patch.phonePushEnabled
+  if (typeof patch.emailIncludeTitle === 'boolean') settings.emailIncludeTitle = patch.emailIncludeTitle
+  if (typeof patch.emailHost === 'string') settings.emailHost = patch.emailHost.trim().slice(0, 253)
+  if (Number.isInteger(patch.emailPort) && patch.emailPort > 0 && patch.emailPort < 65536) settings.emailPort = patch.emailPort
+  if (patch.emailSecurity === 'tls' || patch.emailSecurity === 'starttls') settings.emailSecurity = patch.emailSecurity
+  if (typeof patch.emailUser === 'string') settings.emailUser = patch.emailUser.trim().slice(0, 254)
+  if (typeof patch.emailRecipient === 'string') settings.emailRecipient = patch.emailRecipient.trim().slice(0, 254)
+  if (typeof patch.emailEnabled === 'boolean') {
+    settings.emailEnabled = false
+    if (patch.emailEnabled) {
+      try { emailConfig(); settings.emailEnabled = true } catch { /* 配置完整后再开启 */ }
+    }
   }
-  if (typeof patch.phonePushIncludeTitle === 'boolean') settings.phonePushIncludeTitle = patch.phonePushIncludeTitle
   if (typeof patch.autoStart === 'boolean') {
     if (patch.autoStart) setLaunchWithApps(false)
     setAutoStart(patch.autoStart)
@@ -465,21 +488,30 @@ ipcMain.handle('whale:completion:activate', async (_event, id) => {
   return focusExistingWindow(target.app, target.host)
 })
 
-const pushedCompletions = new Set()
-ipcMain.on('whale:completion:phone', (event, id) => {
-  if (!win || event.sender !== win.webContents || !settings.phonePushEnabled || !serverRef?.getCompletion) return
-  const completion = serverRef.getCompletion(id)
-  if (!completion || pushedCompletions.has(id)) return
-  pushedCompletions.add(id)
-  if (pushedCompletions.size > 300) pushedCompletions.delete(pushedCompletions.values().next().value)
-  publishPhonePush(settings.phonePushTopic, messageForCompletion(completion, settings.phonePushIncludeTitle))
-    .catch((err) => console.error('[whale] iPhone 提醒失败:', err.message))
+ipcMain.handle('whale:email:password', (event, password) => {
+  if (!settingsWin || event.sender !== settingsWin.webContents) return { ok: false, error: '请从详细设置窗口保存' }
+  if (typeof password !== 'string' || password.length > 1024) return { ok: false, error: '授权码无效' }
+  if (password && !safeStorage.isEncryptionAvailable()) return { ok: false, error: 'Windows 安全存储不可用' }
+  settings.emailSecret = password ? safeStorage.encryptString(password).toString('base64') : ''
+  saveSettings()
+  announceSettings()
+  return { ok: true }
 })
-ipcMain.handle('whale:phone:test', async (event) => {
+const emailedCompletions = new Set()
+ipcMain.on('whale:completion:email', (event, id) => {
+  if (!win || event.sender !== win.webContents || !settings.emailEnabled || !serverRef?.getCompletion) return
+  const completion = serverRef.getCompletion(id)
+  if (!completion || emailedCompletions.has(id)) return
+  emailedCompletions.add(id)
+  if (emailedCompletions.size > 300) emailedCompletions.delete(emailedCompletions.values().next().value)
+  Promise.resolve().then(() => sendSmtpEmail(emailConfig(), '小鲸鱼 · 对话已完成',
+    messageForCompletion(completion, settings.emailIncludeTitle)))
+    .catch((err) => console.error('[whale] 邮件提醒失败:', err.message))
+})
+ipcMain.handle('whale:email:test', async (event) => {
   if (!settingsWin || event.sender !== settingsWin.webContents) return { ok: false, error: '请从设置窗口测试' }
-  if (!settings.phonePushEnabled) return { ok: false, error: '请先开启 iPhone 提醒' }
   try {
-    await publishPhonePush(settings.phonePushTopic, '小鲸鱼测试提醒：电脑与 iPhone 已连接')
+    await sendSmtpEmail(emailConfig(), '小鲸鱼 · 测试邮件', '小鲸鱼邮件提醒已连接。')
     return { ok: true }
   } catch (err) { return { ok: false, error: err.message } }
 })
@@ -562,6 +594,8 @@ app.whenReady().then(async () => {
   soundsDirPath = started.dirs.soundsDir || ''
   skinsDirPath = started.dirs.skinsDir || ''
   loadSettings()
+  // 升级时将旧 ntfy 主题和开关从本地设置文件中移除。
+  saveSettings()
 
   createWindow()
   createTray(started.dirs.configPath)

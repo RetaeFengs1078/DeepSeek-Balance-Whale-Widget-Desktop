@@ -37,5 +37,5 @@ contextBridge.exposeInMainWorld('__whale', {
   openSettings: () => ipcRenderer.invoke('whale:settings:open'),
   notifyWidgetSettings: (values) => ipcRenderer.send('whale:widget:updated', values),
   activateCompletion: (id) => ipcRenderer.invoke('whale:completion:activate', id),
-  notifyPhoneCompletion: (id) => ipcRenderer.send('whale:completion:phone', id),
+  notifyEmailCompletion: (id) => ipcRenderer.send('whale:completion:email', id),
 })

@@ -33,10 +33,10 @@
     .inline { display: flex; align-items: center; gap: 9px; min-width: 0; }
     .inline input[type="range"] { flex: 1; min-width: 60px; accent-color: #536ba9; }
     .inline select { flex: 1; min-width: 0; }
-    select, input[type="number"], input[type="password"] { min-height: 30px; border: 1px solid rgba(32,49,112,.38);
+    select, input[type="number"], input[type="password"], input[type="text"], input[type="email"] { min-height: 30px; border: 1px solid rgba(32,49,112,.38);
       border-radius: 7px; background: white; color: #203170; padding: 4px 7px; outline-color: #536ba9; }
     input[type="number"] { width: 65px; }
-    input[type="password"] { flex: 1; min-width: 0; }
+    input[type="password"], input[type="text"], input[type="email"] { flex: 1; min-width: 0; }
     input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: #536ba9; }
     button.action { border: 1px solid rgba(32,49,112,.35); border-radius: 7px; color: #203170;
       background: rgba(32,49,112,.08); min-height: 30px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
@@ -87,13 +87,18 @@
       <div class="row"><label for="turn-cost-seconds">自动关闭</label><div class="inline"><input id="turn-cost-seconds" type="number" min="0" max="600" step="1"><span class="muted">秒；0 表示手动关闭</span></div></div>
     </section>
 
-    <section aria-labelledby="phone-title">
-      <h2 id="phone-title">iPhone 完成提醒</h2>
-      <p class="description">使用免费的 ntfy 服务。在 iPhone 安装 ntfy，添加下方的专属主题。提醒会经过 ntfy 的服务器；主题地址不要公开分享。</p>
-      <div class="row"><label for="phone-enabled">发送到 iPhone</label><input id="phone-enabled" type="checkbox"></div>
-      <div class="row"><label for="phone-title-enabled">包含对话标题</label><input id="phone-title-enabled" type="checkbox"></div>
-      <div class="row"><span class="caption">手机订阅主题</span><div class="inline"><code id="phone-topic" class="muted">开启后生成</code><button class="action" id="phone-copy" type="button">复制地址</button></div></div>
-      <div class="row"><span class="caption">连接测试</span><div class="inline"><button class="action" id="phone-test" type="button">发送测试提醒</button><span id="phone-status" class="muted"></span></div></div>
+    <section aria-labelledby="email-title">
+      <h2 id="email-title">邮件完成提醒</h2>
+      <p class="description">新邮箱负责发送，收件地址可以随时更改。请在发件邮箱开启 SMTP 并填写授权码；授权码仅保存在本机 Windows 加密存储中。发送邮件可能受邮箱服务商频率限制。</p>
+      <div class="row"><label for="email-enabled">发送完成邮件</label><input id="email-enabled" type="checkbox"></div>
+      <div class="row"><label for="email-title-enabled">包含对话标题</label><input id="email-title-enabled" type="checkbox"></div>
+      <div class="row"><label for="email-provider">发件邮箱类型</label><select id="email-provider"><option value="custom">手动设置</option><option value="qq">QQ 邮箱</option><option value="163">网易 163 邮箱</option><option value="gmail">Gmail</option><option value="icloud">iCloud 邮箱</option></select></div>
+      <div class="row"><label for="email-host">SMTP 服务器</label><input id="email-host" type="text" autocomplete="off" placeholder="例如 smtp.qq.com"></div>
+      <div class="row"><label for="email-port">端口</label><div class="inline"><input id="email-port" type="number" min="1" max="65535"><select id="email-security" aria-label="加密方式"><option value="tls">SSL/TLS</option><option value="starttls">STARTTLS</option></select></div></div>
+      <div class="row"><label for="email-user">发件邮箱</label><input id="email-user" type="email" autocomplete="off" placeholder="新邮箱地址"></div>
+      <div class="row"><label for="email-recipient">收件邮箱</label><input id="email-recipient" type="email" autocomplete="off" placeholder="可随时修改，例如你的 QQ 邮箱"></div>
+      <div class="row"><label for="email-password">SMTP 授权码</label><div class="inline"><input id="email-password" type="password" autocomplete="new-password" placeholder="未保存"><button class="action" id="email-save-password" type="button">保存</button><button class="action" id="email-clear-password" type="button">清除</button></div></div>
+      <div class="row"><span class="caption">发送测试</span><div class="inline"><button class="action" id="email-test" type="button">发送测试邮件</button><span id="email-status" class="muted"></span></div></div>
     </section>
 
     <section aria-labelledby="codex-title">

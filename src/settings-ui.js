@@ -33,11 +33,17 @@
     byId('launch-with-apps').disabled = !!desktop.autoStart
     byId('sound-custom').value = desktop.soundSet || ''
     byId('skin-select').value = desktop.skinId || 'default'
-    byId('phone-enabled').checked = !!desktop.phonePushEnabled
-    byId('phone-title-enabled').checked = desktop.phonePushIncludeTitle !== false
-    byId('phone-topic').textContent = desktop.phonePushTopic ? 'https://ntfy.sh/' + desktop.phonePushTopic : '开启后生成'
-    byId('phone-copy').disabled = !desktop.phonePushTopic
-    byId('phone-test').disabled = !desktop.phonePushEnabled
+    byId('email-enabled').checked = !!desktop.emailEnabled
+    byId('email-title-enabled').checked = desktop.emailIncludeTitle !== false
+    byId('email-host').value = desktop.emailHost || ''
+    byId('email-port').value = String(desktop.emailPort || 465)
+    byId('email-security').value = desktop.emailSecurity || 'tls'
+    byId('email-user').value = desktop.emailUser || ''
+    byId('email-recipient').value = desktop.emailRecipient || ''
+    byId('email-provider').value = ({ 'smtp.qq.com': 'qq', 'smtp.163.com': '163',
+      'smtp.gmail.com': 'gmail', 'smtp.mail.me.com': 'icloud' })[desktop.emailHost] || 'custom'
+    byId('email-password').placeholder = desktop.hasEmailPassword ? '已保存（留空不修改）' : '未保存'
+    byId('email-clear-password').disabled = !desktop.hasEmailPassword
   }
   function renderWidget(next) {
     widget = next || {}
@@ -125,22 +131,49 @@
   bindDesktopCheckbox('always-on-top', 'alwaysOnTop')
   bindDesktopCheckbox('quota-panel', 'showQuotaPanel')
   bindDesktopCheckbox('launch-with-apps', 'launchWithApps')
-  bindDesktopCheckbox('phone-enabled', 'phonePushEnabled')
-  bindDesktopCheckbox('phone-title-enabled', 'phonePushIncludeTitle')
-  byId('phone-copy').addEventListener('click', function () {
-    if (!desktop.phonePushTopic) return
-    navigator.clipboard.writeText('https://ntfy.sh/' + desktop.phonePushTopic)
-      .then(function () { setStatus('phone-status', '地址已复制') })
-      .catch(function () { setStatus('phone-status', '复制失败，请手动选择地址') })
+  bindDesktopCheckbox('email-title-enabled', 'emailIncludeTitle')
+  byId('email-enabled').addEventListener('change', function () {
+    var wanted = this.checked
+    patchDesktop({ emailEnabled: wanted }).then(function () {
+      setStatus('email-status', wanted && !desktop.emailEnabled ? '请先填写完整邮箱配置并保存授权码' : '')
+    })
   })
-  byId('phone-test').addEventListener('click', function () {
+  byId('email-provider').addEventListener('change', function () {
+    var presets = { qq: ['smtp.qq.com', 465, 'tls'], '163': ['smtp.163.com', 465, 'tls'],
+      gmail: ['smtp.gmail.com', 465, 'tls'], icloud: ['smtp.mail.me.com', 587, 'starttls'] }
+    var preset = presets[this.value]
+    if (preset) patchDesktop({ emailHost: preset[0], emailPort: preset[1], emailSecurity: preset[2] })
+  })
+  ;[['email-host', 'emailHost'], ['email-user', 'emailUser'], ['email-recipient', 'emailRecipient']].forEach(function (pair) {
+    byId(pair[0]).addEventListener('change', function () { patchDesktop({ [pair[1]]: this.value }) })
+  })
+  byId('email-port').addEventListener('change', function () { patchDesktop({ emailPort: Number(this.value) }) })
+  byId('email-security').addEventListener('change', function () { patchDesktop({ emailSecurity: this.value }) })
+  byId('email-save-password').addEventListener('click', function () {
+    var input = byId('email-password')
+    if (!input.value) { setStatus('email-status', '请先填写 SMTP 授权码'); return }
     var button = this
     button.disabled = true
-    setStatus('phone-status', '正在发送…')
-    bridge.testPhonePush().then(function (result) {
-      setStatus('phone-status', result.ok ? '已发送，请查看 iPhone' : (result.error || '发送失败'))
-    }).catch(function () { setStatus('phone-status', '发送失败，请检查网络') })
-      .finally(function () { button.disabled = !desktop.phonePushEnabled })
+    bridge.saveEmailPassword(input.value).then(function (result) {
+      setStatus('email-status', result.ok ? '授权码已加密保存' : (result.error || '保存失败'))
+      if (result.ok) input.value = ''
+    }).catch(function () { setStatus('email-status', '保存失败') })
+      .finally(function () { button.disabled = false })
+  })
+  byId('email-clear-password').addEventListener('click', function () {
+    bridge.saveEmailPassword('').then(function (result) {
+      setStatus('email-status', result.ok ? '授权码已清除' : (result.error || '清除失败'))
+      if (result.ok) patchDesktop({ emailEnabled: false })
+    })
+  })
+  byId('email-test').addEventListener('click', function () {
+    var button = this
+    button.disabled = true
+    setStatus('email-status', '正在发送…')
+    bridge.testEmail().then(function (result) {
+      setStatus('email-status', result.ok ? '邮件已交给发件服务器，请查看收件箱' : (result.error || '发送失败'))
+    }).catch(function () { setStatus('email-status', '发送失败，请检查网络') })
+      .finally(function () { button.disabled = false })
   })
   byId('sound-custom').addEventListener('change', function () { patchDesktop({ soundSet: this.value }) })
   byId('skin-select').addEventListener('change', function () { patchDesktop({ skinId: this.value }) })
