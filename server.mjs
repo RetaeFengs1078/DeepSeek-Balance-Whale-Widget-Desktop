@@ -400,6 +400,16 @@ export async function startServer(opts = {}) {
       catch { send(res, 500, 'Codex 界面脚本读取失败') }
       return
     }
+    if (pathname === '/src/desktop-menu.js') {
+      try { send(res, 200, fs.readFileSync(path.join(dirs.root, 'src', 'desktop-menu.js'), 'utf8'), 'text/javascript; charset=utf-8') }
+      catch { send(res, 500, '桌面菜单脚本读取失败') }
+      return
+    }
+    if (pathname === '/src/settings-ui.js') {
+      try { send(res, 200, fs.readFileSync(path.join(dirs.root, 'src', 'settings-ui.js'), 'utf8'), 'text/javascript; charset=utf-8') }
+      catch { send(res, 500, '设置界面脚本读取失败') }
+      return
+    }
 
     if (pathname === '/whale/codex.json') {
       if (req.method !== 'GET') { send(res, 405, 'method not allowed'); return }
@@ -468,6 +478,12 @@ export async function startServer(opts = {}) {
         try { html = indexTap(html) } catch (err) { /* 注入失败就原样返回 */ }
       }
       send(res, 200, html, 'text/html; charset=utf-8')
+      return
+    }
+
+    if (pathname === '/settings.html') {
+      try { send(res, 200, fs.readFileSync(path.join(dirs.root, 'settings.html'), 'utf8'), 'text/html; charset=utf-8') }
+      catch { send(res, 500, '设置界面读取失败') }
       return
     }
 

@@ -25,7 +25,10 @@
     }
     selectedSkinId = settings && settings.skinId === 'portrait' ? 'portrait' : 'default'
     window.whaleSelectedSkin = selectedSkinId
-    if (skinSelect) skinSelect.value = selectedSkinId
+    if (skinSelect) {
+      skinSelect.value = selectedSkinId
+      if (skinSelect.value !== selectedSkinId && window.whaleRefreshSkins) window.whaleRefreshSkins()
+    }
     if (window.whaleSetSkin) window.whaleSetSkin(selectedSkinId)
   }
   if (window.__whale && window.__whale.getSettings) {
@@ -282,21 +285,6 @@
     menu.appendChild(separator)
     menu.appendChild(rowElement)
 
-    var statusRow = document.createElement('div')
-    statusRow.className = 'dshwv-menu-row codex-ext'
-    remoteStatus = document.createElement('span')
-    remoteStatus.style.cssText = 'font-size:11px;color:#6b7ba6;white-space:normal'
-    remoteStatus.textContent = '远端：检查中…'
-    statusRow.appendChild(remoteStatus)
-    menu.appendChild(statusRow)
-
-    var usageRow = document.createElement('div')
-    usageRow.className = 'dshwv-menu-row codex-ext'
-    usageStatus = document.createElement('span')
-    usageStatus.style.cssText = 'font-size:11px;color:#536ba9;white-space:pre-line;line-height:1.5'
-    usageStatus.textContent = '6 Pro 计数：读取中…'
-    usageRow.appendChild(usageStatus)
-    menu.appendChild(usageRow)
     refreshUsage()
 
     if (window.__whale && window.__whale.patchSettings) {
@@ -334,6 +322,7 @@
             skinSelect.value = selectedSkinId
           }).catch(function () {})
       }
+      window.whaleRefreshSkins = refreshSkins
       skinSelect.addEventListener('change', function (event) {
         event.stopPropagation()
         var previous = selectedSkinId
@@ -347,28 +336,6 @@
         })
       })
 
-      var skinTools = document.createElement('div')
-      skinTools.className = 'dshwv-menu-row codex-ext'
-      var openSkinFolder = document.createElement('button')
-      openSkinFolder.type = 'button'
-      openSkinFolder.className = 'dshwv-sound'
-      openSkinFolder.textContent = '打开皮肤文件夹'
-      openSkinFolder.addEventListener('click', function (event) {
-        event.stopPropagation()
-        if (window.__whale.openSkins) window.__whale.openSkins()
-      })
-      var refreshSkinList = document.createElement('button')
-      refreshSkinList.type = 'button'
-      refreshSkinList.className = 'dshwv-sound'
-      refreshSkinList.textContent = '刷新'
-      refreshSkinList.addEventListener('click', function (event) {
-        event.stopPropagation()
-        refreshSkins().then(function () { if (window.whaleSetSkin) window.whaleSetSkin(selectedSkinId, true) })
-      })
-      skinTools.appendChild(openSkinFolder)
-      skinTools.appendChild(refreshSkinList)
-      skinTools.addEventListener('click', function (event) { event.stopPropagation() })
-      menu.appendChild(skinTools)
       refreshSkins()
     }
 
@@ -392,9 +359,20 @@
       })
       return checkbox
     }
-    panelToggle = settingRow('常显额度面板', 'showQuotaPanel')
     startupToggle = settingRow('开机自启动', 'autoStart')
-    appLaunchToggle = settingRow('打开 VS Code/ChatGPT 时启动', 'launchWithApps')
+    var moreRow = document.createElement('div')
+    moreRow.className = 'dshwv-menu-row codex-ext'
+    var moreButton = document.createElement('button')
+    moreButton.type = 'button'
+    moreButton.className = 'dshwv-sound'
+    moreButton.textContent = '详细设置…'
+    moreButton.addEventListener('click', function (event) {
+      event.stopPropagation()
+      if (window.whaleCloseMenu) window.whaleCloseMenu()
+      window.__whale.openSettings().catch(function () {})
+    })
+    moreRow.appendChild(moreButton)
+    menu.appendChild(moreRow)
     window.__whale.getSettings().then(applySettings).catch(function () {})
   }, 300)
 

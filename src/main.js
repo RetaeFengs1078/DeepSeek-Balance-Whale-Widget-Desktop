@@ -18,6 +18,7 @@ const { focusExistingWindow } = require('./focus-existing-window.js')
 const APP_ROOT = path.join(__dirname, '..')
 
 let win = null
+let settingsWin = null
 let tray = null
 let interactive = false
 let serverRef = null
@@ -155,6 +156,7 @@ function setLaunchWithApps(enabled) {
 function currentSettings() { return { ...settings, autoStart: autoStartEnabled(), launchWithApps: launchWithAppsEnabled() } }
 function announceSettings() {
   if (win && !win.isDestroyed()) win.webContents.send('whale:settings-updated', currentSettings())
+  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('whale:settings-updated', currentSettings())
 }
 
 // 只允许一个实例，否则会起两个本地服务、两只鲸鱼
@@ -305,6 +307,32 @@ function cursorOnInteractiveRegion() {
     p.y <= winPos[1] + rect.y + rect.h + pad)
 }
 
+function openSettingsWindow() {
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    if (settingsWin.isMinimized()) settingsWin.restore()
+    settingsWin.show()
+    settingsWin.focus()
+    return
+  }
+  settingsWin = new BrowserWindow({
+    width: 760, height: 740, minWidth: 600, minHeight: 520,
+    frame: false, show: false, backgroundColor: '#f5f7fd',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'settings-preload.js'),
+      contextIsolation: true, nodeIntegration: false, sandbox: false,
+    },
+  })
+  settingsWin.loadURL(pageUrl + 'settings.html')
+  settingsWin.once('ready-to-show', () => {
+    if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus() }
+  })
+  settingsWin.on('closed', () => { settingsWin = null })
+  setTimeout(() => {
+    if (settingsWin && !settingsWin.isDestroyed() && !settingsWin.isVisible()) settingsWin.show()
+  }, 3000)
+}
+
 function syncInteractive() {
   const next = forceInteractive || cursorOnInteractiveRegion()
   if (next === interactive) return
@@ -355,6 +383,42 @@ ipcMain.on('whale:state', (_event, state) => {
 })
 
 ipcMain.handle('whale:settings', () => currentSettings())
+ipcMain.handle('whale:settings:open', () => { openSettingsWindow(); return true })
+ipcMain.handle('whale:settings:close', () => {
+  setImmediate(() => { if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close() })
+  return true
+})
+ipcMain.handle('whale:settings:minimize', () => { if (settingsWin && !settingsWin.isDestroyed()) settingsWin.minimize() })
+
+ipcMain.handle('whale:widget:get', () => {
+  if (!win || win.isDestroyed()) return null
+  return win.webContents.executeJavaScript('window.whaleGetWidgetSettings && window.whaleGetWidgetSettings()')
+})
+ipcMain.handle('whale:widget:patch', (_event, patch) => {
+  if (!win || win.isDestroyed() || !patch || typeof patch !== 'object') return null
+  const allowed = ['size', 'soundSet', 'volume', 'usageMode', 'peakMode', 'bubbleOn',
+    'turnCostOn', 'turnCostCloseSeconds', 'scrollGapOn', 'scrollGapPx']
+  const safe = {}
+  for (const key of allowed) {
+    const value = patch[key]
+    if (typeof value === 'string' || typeof value === 'boolean' ||
+        (typeof value === 'number' && Number.isFinite(value))) safe[key] = value
+  }
+  return win.webContents.executeJavaScript('window.whalePatchWidgetSettings(' + JSON.stringify(safe) + ')')
+})
+ipcMain.on('whale:widget:updated', (event, values) => {
+  if (!win || event.sender !== win.webContents) return
+  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('whale:widget-updated', values)
+})
+ipcMain.handle('whale:widget:reload', () => { if (win && !win.isDestroyed()) win.reload(); return true })
+ipcMain.handle('whale:skin:refresh', () => {
+  if (!win || win.isDestroyed()) return false
+  return win.webContents.executeJavaScript('window.whaleRefreshSkins && window.whaleRefreshSkins().then(() => window.whaleSetSkin(window.whaleSelectedSkin, true))')
+})
+ipcMain.handle('whale:sound:refresh', () => {
+  if (!win || win.isDestroyed()) return false
+  return win.webContents.executeJavaScript('window.whaleRefreshSounds && window.whaleRefreshSounds()')
+})
 
 ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (!patch || typeof patch !== 'object') return currentSettings()
@@ -407,6 +471,8 @@ let trayConfigPath = ''
 function buildTrayMenu() {
   if (!tray || tray.isDestroyed()) return
   tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '详细设置', click: openSettingsWindow },
+    { type: 'separator' },
     {
       label: '窗口置顶',
       type: 'checkbox',

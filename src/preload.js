@@ -34,5 +34,7 @@ contextBridge.exposeInMainWorld('__whale', {
   },
   openSounds: () => ipcRenderer.invoke('whale:open-sounds'),
   openSkins: () => ipcRenderer.invoke('whale:open-skins'),
+  openSettings: () => ipcRenderer.invoke('whale:settings:open'),
+  notifyWidgetSettings: (values) => ipcRenderer.send('whale:widget:updated', values),
   activateCompletion: (id) => ipcRenderer.invoke('whale:completion:activate', id),
 })

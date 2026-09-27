@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小鲸鱼 · 详细设置</title>
+  <style>
+    :root { color-scheme: light; font-family: "Microsoft YaHei", system-ui, sans-serif; color: #203170; background: #e9eef9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 600px; }
+    button, select, input { font: inherit; }
+    .titlebar { height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 0 15px 0 24px; background: rgba(255,255,255,.94); border-bottom: 1px solid rgba(32,49,112,.2);
+      box-shadow: 0 3px 13px rgba(32,49,112,.07); -webkit-app-region: drag; user-select: none; }
+    .title { font-size: 17px; font-weight: 700; line-height: 1.3; }
+    .subtitle { font-size: 11px; color: #6b7ba6; font-weight: 400; }
+    .title-actions { display: flex; gap: 6px; -webkit-app-region: no-drag; }
+    .title-actions button { width: 32px; height: 30px; border: 0; border-radius: 7px; background: transparent;
+      color: #203170; cursor: pointer; font-size: 17px; }
+    .title-actions button:hover { background: rgba(32,49,112,.1); }
+    .title-actions #close-window:hover { background: #cf4055; color: white; }
+    main { height: calc(100vh - 64px); overflow: auto; padding: 18px 22px 28px; }
+    .intro { font-size: 12px; color: #66789e; margin: 0 2px 15px; }
+    section { background: rgba(255,255,255,.94); border: 1px solid rgba(32,49,112,.27); border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(32,49,112,.08); padding: 16px 18px; margin-bottom: 14px; }
+    h2 { font-size: 14px; margin: 0 0 12px; color: #203170; }
+    .description { font-size: 11px; line-height: 1.5; color: #6b7ba6; margin: -5px 0 10px; }
+    .row { display: grid; grid-template-columns: 135px minmax(0, 1fr); align-items: center; gap: 12px;
+      padding: 8px 0; border-top: 1px solid rgba(32,49,112,.08); font-size: 12px; }
+    .row:first-of-type { border-top: 0; }
+    .row label, .row .caption { color: #203170; }
+    .inline { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .inline input[type="range"] { flex: 1; min-width: 60px; accent-color: #536ba9; }
+    .inline select { flex: 1; min-width: 0; }
+    select, input[type="number"], input[type="password"] { min-height: 30px; border: 1px solid rgba(32,49,112,.38);
+      border-radius: 7px; background: white; color: #203170; padding: 4px 7px; outline-color: #536ba9; }
+    input[type="number"] { width: 65px; }
+    input[type="password"] { flex: 1; min-width: 0; }
+    input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: #536ba9; }
+    button.action { border: 1px solid rgba(32,49,112,.35); border-radius: 7px; color: #203170;
+      background: rgba(32,49,112,.08); min-height: 30px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+    button.action:hover { background: rgba(32,49,112,.16); }
+    button.action:disabled, input:disabled { opacity: .45; cursor: not-allowed; }
+    .muted { font-size: 11px; color: #6b7ba6; }
+    .output { white-space: pre-line; font-size: 12px; line-height: 1.6; color: #405781; padding: 5px 0; }
+    .status { min-height: 18px; font-size: 11px; color: #536ba9; margin-top: 5px; }
+    .wide { grid-column: 1 / -1; }
+    @media (max-width: 650px) { main { padding: 13px; } .row { grid-template-columns: 105px minmax(0, 1fr); } }
+  </style>
+</head>
+<body>
+  <header class="titlebar">
+    <div><div class="title">小鲸鱼 · 详细设置</div><div class="subtitle">与小鲸鱼菜单使用同一份设置，修改后立即生效</div></div>
+    <div class="title-actions"><button id="minimize-window" type="button" aria-label="最小化">−</button><button id="close-window" type="button" aria-label="关闭">×</button></div>
+  </header>
+  <main>
+    <p class="intro">菜单保留常用设置；这里可查看和调整全部功能。</p>
+
+    <section aria-labelledby="basic-title">
+      <h2 id="basic-title">常用</h2>
+      <div class="row"><label for="size-range">小鲸鱼大小</label><div class="inline"><input id="size-range" type="range" min="1" max="20" step="1"><input id="size-number" type="number" min="1" max="20" step="1" aria-label="大小数值"></div></div>
+      <div class="row"><label for="sound-preset">点击音效</label><select id="sound-preset"><option value="duck">小黄鸭</option><option value="fx1">音效1</option></select></div>
+      <div class="row"><label for="sound-custom">自定义音效包</label><select id="sound-custom"><option value="">使用上方内置音效</option></select></div>
+      <div class="row"><span class="caption">音效文件</span><div class="inline"><button class="action" id="open-sounds" type="button">打开文件夹</button><button class="action" id="refresh-sounds" type="button">刷新列表</button></div></div>
+      <div class="row"><label for="volume-range">音量</label><div class="inline"><input id="volume-range" type="range" min="0" max="100" step="5"><span id="volume-value">90%</span></div></div>
+      <div class="row"><label for="skin-select">更换皮肤</label><select id="skin-select"><option value="default">原版小鲸鱼</option></select></div>
+      <div class="row"><span class="caption">皮肤文件</span><div class="inline"><button class="action" id="open-skins" type="button">打开文件夹</button><button class="action" id="refresh-skins" type="button">刷新列表</button></div></div>
+      <div class="row"><label for="auto-start">开机自启动</label><input id="auto-start" type="checkbox"></div>
+    </section>
+
+    <section aria-labelledby="appearance-title">
+      <h2 id="appearance-title">外观与气泡</h2>
+      <div class="row"><label for="always-on-top">窗口置顶</label><input id="always-on-top" type="checkbox"></div>
+      <div class="row"><label for="bubble-on">点击气泡</label><input id="bubble-on" type="checkbox"></div>
+      <div class="row"><label for="quota-panel">常显额度面板</label><input id="quota-panel" type="checkbox"></div>
+      <div class="row"><label for="scroll-gap-on">避让滚动条</label><input id="scroll-gap-on" type="checkbox"></div>
+      <div class="row"><label for="scroll-gap-px">避让宽度</label><div class="inline"><input id="scroll-gap-px" type="number" min="0" max="200" step="1"><span class="muted">像素</span></div></div>
+    </section>
+
+    <section aria-labelledby="launch-title">
+      <h2 id="launch-title">启动与提醒</h2>
+      <div class="row"><label for="launch-with-apps">打开 VS Code/ChatGPT 时启动</label><input id="launch-with-apps" type="checkbox"></div>
+      <p class="description">开机自启动开启时，这个备用启动方式会自动关闭。</p>
+      <div class="row"><label for="turn-cost-on">每轮消耗提示</label><input id="turn-cost-on" type="checkbox"></div>
+      <div class="row"><label for="turn-cost-seconds">自动关闭</label><div class="inline"><input id="turn-cost-seconds" type="number" min="0" max="600" step="1"><span class="muted">秒；0 表示手动关闭</span></div></div>
+    </section>
+
+    <section aria-labelledby="codex-title">
+      <h2 id="codex-title">Codex 额度与网页统计</h2>
+      <div class="inline"><button class="action" id="refresh-usage" type="button">立即刷新</button><span id="refresh-status" class="muted"></span></div>
+      <div id="quota-summary" class="output">正在读取额度…</div>
+      <div id="usage-summary" class="output">正在读取网页统计…</div>
+      <div id="remote-summary" class="output">远端：检查中…</div>
+    </section>
+
+    <section aria-labelledby="deepseek-title">
+      <h2 id="deepseek-title">DeepSeek（可选）</h2>
+      <p class="description">使用 Codex 额度不需要 API Key。以下仅供继续使用原 DeepSeek 功能时设置。</p>
+      <div class="row"><label for="usage-mode">用量计算</label><select id="usage-mode"><option value="ledger">小鲸鱼记账</option><option value="token">实时令牌</option></select></div>
+      <div class="row"><label for="peak-mode">峰谷模式</label><select id="peak-mode"><option value="default">默认</option><option value="liangwen">梁文峰谷</option><option value="qiangqiang">强强峰谷</option></select></div>
+      <div class="row"><label for="api-key">API Key</label><div class="inline"><input id="api-key" type="password" autocomplete="off" placeholder="未设置"><button class="action" id="save-api-key" type="button">保存</button></div></div>
+      <div id="api-key-status" class="status"></div>
+    </section>
+  </main>
+  <script src="/src/settings-ui.js" defer></script>
+</body>
+</html>

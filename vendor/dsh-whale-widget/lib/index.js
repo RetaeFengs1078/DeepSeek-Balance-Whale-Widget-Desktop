@@ -350,12 +350,6 @@ row9.appendChild(menuLabel('px'))
 menuBox.appendChild(row1)
 menuBox.appendChild(row2)
 menuBox.appendChild(row3)
-menuBox.appendChild(row4)
-menuBox.appendChild(row5)
-menuBox.appendChild(row6)
-menuBox.appendChild(row7)
-menuBox.appendChild(menuSep1)
-menuBox.appendChild(row9)
 
 var textBox = document.createElement('div')
 textBox.className = 'dshwv-text'
@@ -949,6 +943,9 @@ function saveConfig() {
       vAnchor: topDist <= bottomDist ? 'top' : 'bottom',
       vDist: Math.round(Math.min(topDist, bottomDist))
     }))
+    if (window.__whale && window.__whale.notifyWidgetSettings) {
+      window.__whale.notifyWidgetSettings(widgetSettingsSnapshot())
+    }
   } catch (err) {}
 }
 function setUsageMode(v) {
@@ -1054,6 +1051,32 @@ function setSoundSet(v) {
   soundSelect.value = soundSet
   applySoundSet()
   saveConfig()
+}
+function widgetSettingsSnapshot() {
+  return {
+    size: scaleToDisplay(state.scale), soundSet: soundSet, volume: soundVol,
+    usageMode: usageMode, peakMode: peakMode, bubbleOn: bubbleOn,
+    turnCostOn: turnCostOn, turnCostCloseSeconds: Math.round(turnCostCloseMs / 1000),
+    scrollGapOn: scrollGapOn, scrollGapPx: scrollGapPx,
+  }
+}
+window.whaleGetWidgetSettings = widgetSettingsSnapshot
+window.whalePatchWidgetSettings = function (patch) {
+  if (!patch || typeof patch !== 'object') return widgetSettingsSnapshot()
+  if (typeof patch.size === 'number' && isFinite(patch.size)) {
+    var size = Math.max(1, Math.min(20, Math.round(patch.size)))
+    setScale(MIN_SCALE + (size - 1) * (MAX_SCALE - MIN_SCALE) / 19)
+  }
+  if (patch.soundSet === 'duck' || patch.soundSet === 'fx1') setSoundSet(patch.soundSet)
+  if (typeof patch.volume === 'number' && isFinite(patch.volume)) setVol(patch.volume)
+  if (patch.usageMode === 'ledger' || patch.usageMode === 'token') setUsageMode(patch.usageMode)
+  if (patch.peakMode === 'default' || patch.peakMode === 'liangwen' || patch.peakMode === 'qiangqiang') setPeakMode(patch.peakMode)
+  if (typeof patch.bubbleOn === 'boolean') setBubbleOn(patch.bubbleOn)
+  if (typeof patch.turnCostOn === 'boolean') setTurnCostOn(patch.turnCostOn)
+  if (typeof patch.turnCostCloseSeconds === 'number' && isFinite(patch.turnCostCloseSeconds)) setTurnCostClose(patch.turnCostCloseSeconds)
+  if (typeof patch.scrollGapOn === 'boolean') setScrollGapOn(patch.scrollGapOn)
+  if (typeof patch.scrollGapPx === 'number' && isFinite(patch.scrollGapPx)) setScrollGapPx(patch.scrollGapPx)
+  return widgetSettingsSnapshot()
 }
 var SQUISH = 'scaleY(0.88) scaleX(1.05)'
 var pressAudio = null
@@ -1248,6 +1271,7 @@ function setupHitTest() {
     probe.src = IMG_URL
   } catch (err) {}
 }
+window.whaleCloseMenu = closeMenu
 var currentSkinId = 'default'
 function setWidgetSkin(skinId, force) {
   var nextId = skinId === 'portrait' ? 'portrait' : 'default'
