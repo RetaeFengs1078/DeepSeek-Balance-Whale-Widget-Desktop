@@ -667,6 +667,20 @@ function showInfoBubble(info) {
   labelEl.textContent = String(info.label || '')
   amountEl.textContent = String(info.amount || '读取中…')
   hintEl.textContent = String(info.hint || '')
+  if (info.kind === 'almanac') {
+    // 只给「宜」「忌」上色，后面的黄历事项仍使用气泡原有文字颜色。
+    ;[[amountEl, '宜', 'dshwv-yi'], [hintEl, '忌', 'dshwv-ji']].forEach(function (entry) {
+      var element = entry[0]
+      var line = element.textContent
+      if (!line.startsWith(entry[1])) return
+      element.textContent = ''
+      var prefix = document.createElement('span')
+      prefix.className = entry[2]
+      prefix.textContent = entry[1]
+      element.appendChild(prefix)
+      element.appendChild(document.createTextNode(line.slice(1)))
+    })
+  }
   hintEl.style.display = info.hint ? '' : 'none'
   bubbleBox.title = String(info.title || '')
   bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
