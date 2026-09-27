@@ -163,6 +163,7 @@ var css = [
   '.dshwv-wrap{white-space:normal;max-width:calc(var(--dshw-u) * 560);line-height:1.2}',
   '.dshwv-hint{font-size:calc(var(--dshw-u) * 56);color:#9fb0d9;letter-spacing:.02em;margin-top:calc(var(--dshw-u) * 9);min-height:calc(var(--dshw-u) * 64);line-height:1.15}',
   '.dshwv-menu-btn{position:absolute;top:calc(40.55% + 4px);right:4px;width:26px;height:26px;border:none;border-radius:6px;background:rgba(32,49,112,.85);cursor:pointer;pointer-events:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;z-index:2;opacity:0;transition:opacity .15s ease}',
+  '.dshwv-root.dshwv-portrait .dshwv-menu-btn{top:16%}',
   '.dshwv-menu-btn.dshwv-menu-btn-visible{opacity:1}',
   '.dshwv-menu-btn span{display:block;width:14px;height:2px;background:#fff;border-radius:1px}',
   '.dshwv-menu-btn:hover{background:#203170}',
@@ -1224,17 +1225,22 @@ function positionMenu() {
 
 var hitCanvas = null
 var hitReady = false
+var hitGeneration = 0
 function setupHitTest() {
   try {
-    hitCanvas = document.createElement('canvas')
-    hitCanvas.width = 610
-    hitCanvas.height = 610
+    var generation = ++hitGeneration
+    hitReady = false
+    var nextCanvas = document.createElement('canvas')
+    nextCanvas.width = 610
+    nextCanvas.height = 610
     var probe = new Image()
     probe.onload = function () {
+      if (generation !== hitGeneration) return
       try {
         // 拉伸到 610×610 与 isWhaleHit 的坐标映射对齐；不指定尺寸会按原图大小绘制，
         // 回退到非 610×610 素材（如 DSniang02.png）时命中区域会错位
-        hitCanvas.getContext('2d').drawImage(probe, 0, 0, 610, 610)
+        nextCanvas.getContext('2d').drawImage(probe, 0, 0, 610, 610)
+        hitCanvas = nextCanvas
         hitReady = true
       } catch (err) {}
     }
@@ -1242,6 +1248,20 @@ function setupHitTest() {
     probe.src = IMG_URL
   } catch (err) {}
 }
+var currentSkinId = 'default'
+function setWidgetSkin(skinId, force) {
+  var nextId = skinId === 'portrait' ? 'portrait' : 'default'
+  if (nextId === currentSkinId && !force) return
+  currentSkinId = nextId
+  root.classList.toggle('dshwv-portrait', nextId === 'portrait')
+  IMG_URL = nextId === 'portrait' ? '/whale/skin/portrait.png?v=' + Date.now() : '/dsh-whale/image.png?v=2'
+  img.src = IMG_URL
+  setupHitTest()
+}
+img.onerror = function () {
+  if (currentSkinId === 'portrait') setWidgetSkin('default')
+}
+window.whaleSetSkin = setWidgetSkin
 function isWhaleHit(e) {
   if (!hitCanvas || !hitReady) return true
   try {
@@ -1435,6 +1455,7 @@ express()
 render()
 applySoundSet()
 setupHitTest()
+if (window.whaleSelectedSkin) setWidgetSkin(window.whaleSelectedSkin)
 fetch(SIZE_URL, { cache: 'no-store' })
   .then(function (r) { return r.json() })
   .then(function (d) {

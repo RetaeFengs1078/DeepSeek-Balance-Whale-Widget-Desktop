@@ -11,6 +11,8 @@
   var panelToggle = null
   var startupToggle = null
   var appLaunchToggle = null
+  var skinSelect = null
+  var selectedSkinId = 'default'
   function applySettings(settings) {
     var show = !!(settings && settings.showQuotaPanel)
     panel.hidden = !show
@@ -21,6 +23,10 @@
       appLaunchToggle.disabled = !!(settings && settings.autoStart)
       appLaunchToggle.title = appLaunchToggle.disabled ? '开机自启动已开启' : ''
     }
+    selectedSkinId = settings && settings.skinId === 'portrait' ? 'portrait' : 'default'
+    window.whaleSelectedSkin = selectedSkinId
+    if (skinSelect) skinSelect.value = selectedSkinId
+    if (window.whaleSetSkin) window.whaleSetSkin(selectedSkinId)
   }
   if (window.__whale && window.__whale.getSettings) {
     window.__whale.getSettings().then(applySettings).catch(function () {})
@@ -292,6 +298,79 @@
     usageRow.appendChild(usageStatus)
     menu.appendChild(usageRow)
     refreshUsage()
+
+    if (window.__whale && window.__whale.patchSettings) {
+      var skinRow = document.createElement('div')
+      skinRow.className = 'dshwv-menu-row codex-ext'
+      var skinLabel = document.createElement('span')
+      skinLabel.textContent = '更换皮肤'
+      skinSelect = document.createElement('select')
+      skinSelect.setAttribute('aria-label', '更换小鲸鱼皮肤')
+      skinSelect.style.cssText = 'flex:1;min-width:0;font-size:11px;color:#203170;border:1px solid #9daac9;border-radius:5px;padding:2px;background:white'
+      skinRow.appendChild(skinLabel)
+      skinRow.appendChild(skinSelect)
+      skinRow.addEventListener('click', function (event) { event.stopPropagation() })
+      menu.appendChild(skinRow)
+
+      function refreshSkins() {
+        return fetch('/whale/skins', { cache: 'no-store' })
+          .then(function (response) { return response.json() })
+          .then(function (data) {
+            if (!data || !data.ok || !Array.isArray(data.items)) return
+            skinSelect.textContent = ''
+            data.items.forEach(function (item) {
+              var option = document.createElement('option')
+              option.value = item.id
+              option.textContent = item.name
+              skinSelect.appendChild(option)
+            })
+            var available = data.items.some(function (item) { return item.id === selectedSkinId })
+            if (!available) {
+              selectedSkinId = 'default'
+              window.whaleSelectedSkin = 'default'
+              if (window.whaleSetSkin) window.whaleSetSkin('default')
+              window.__whale.patchSettings({ skinId: 'default' }).catch(function () {})
+            }
+            skinSelect.value = selectedSkinId
+          }).catch(function () {})
+      }
+      skinSelect.addEventListener('change', function (event) {
+        event.stopPropagation()
+        var previous = selectedSkinId
+        selectedSkinId = skinSelect.value
+        window.whaleSelectedSkin = selectedSkinId
+        if (window.whaleSetSkin) window.whaleSetSkin(selectedSkinId)
+        window.__whale.patchSettings({ skinId: selectedSkinId }).then(applySettings).catch(function () {
+          selectedSkinId = previous
+          skinSelect.value = previous
+          if (window.whaleSetSkin) window.whaleSetSkin(previous)
+        })
+      })
+
+      var skinTools = document.createElement('div')
+      skinTools.className = 'dshwv-menu-row codex-ext'
+      var openSkinFolder = document.createElement('button')
+      openSkinFolder.type = 'button'
+      openSkinFolder.className = 'dshwv-sound'
+      openSkinFolder.textContent = '打开皮肤文件夹'
+      openSkinFolder.addEventListener('click', function (event) {
+        event.stopPropagation()
+        if (window.__whale.openSkins) window.__whale.openSkins()
+      })
+      var refreshSkinList = document.createElement('button')
+      refreshSkinList.type = 'button'
+      refreshSkinList.className = 'dshwv-sound'
+      refreshSkinList.textContent = '刷新'
+      refreshSkinList.addEventListener('click', function (event) {
+        event.stopPropagation()
+        refreshSkins().then(function () { if (window.whaleSetSkin) window.whaleSetSkin(selectedSkinId, true) })
+      })
+      skinTools.appendChild(openSkinFolder)
+      skinTools.appendChild(refreshSkinList)
+      skinTools.addEventListener('click', function (event) { event.stopPropagation() })
+      menu.appendChild(skinTools)
+      refreshSkins()
+    }
 
     if (!window.__whale || !window.__whale.patchSettings) return
     function settingRow(text, field) {

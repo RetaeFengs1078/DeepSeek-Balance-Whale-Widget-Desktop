@@ -82,6 +82,9 @@ export async function startServer(opts = {}) {
   const browserCompletions = new BrowserCompletionStore()
   const browserActions = new BrowserActionBridge()
   const usageHistory = new UsageHistory(dirs.dataDir)
+  const skinsDir = path.join(dirs.dataDir, 'skins')
+  fs.mkdirSync(skinsDir, { recursive: true })
+  dirs.skinsDir = skinsDir
   const sampleQuota = () => codexReader.refresh().then(snapshot => usageHistory.sampleQuota(snapshot)).catch(() => {})
   const quotaTimer = setInterval(sampleQuota, 60000)
   quotaTimer.unref()
@@ -290,6 +293,26 @@ export async function startServer(opts = {}) {
     try { pathname = new URL(req.url, 'http://localhost').pathname } catch (err) { pathname = '/' }
 
     if (pathname === '/favicon.ico') { res.writeHead(204); res.end(); return }
+    if (pathname === '/whale/skins' && req.method === 'GET') {
+      const portraitFile = path.join(skinsDir, 'portrait.png')
+      res.writeHead(200, JSON_HEADERS)
+      res.end(JSON.stringify({ ok: true, items: [
+        { id: 'default', name: '原版小鲸鱼' },
+        ...(fs.existsSync(portraitFile) ? [{ id: 'portrait', name: '照片形象' }] : []),
+      ] }))
+      return
+    }
+    if (pathname === '/whale/skin/portrait.png' && req.method === 'GET') {
+      try {
+        const portraitFile = path.join(skinsDir, 'portrait.png')
+        const stat = fs.statSync(portraitFile)
+        if (!stat.isFile() || stat.size > 10 * 1024 * 1024) throw new Error('skin unavailable')
+        const bytes = fs.readFileSync(portraitFile)
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'Content-Length': String(bytes.length) })
+        res.end(bytes)
+      } catch { send(res, 404, 'skin unavailable') }
+      return
+    }
     if (pathname === '/whale/almanac' && req.method === 'GET') {
       res.writeHead(200, JSON_HEADERS)
       res.end(JSON.stringify(getAlmanac()))

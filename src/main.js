@@ -68,12 +68,13 @@ function applyWindowShape(regions) {
 // 桌面端自己的设置（跟插件的尺寸配置分开存，互不覆盖）
 //   alwaysOnTop —— 窗口置顶
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
-const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false }
+const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false, skinId: 'default' }
 const LOGIN_ITEM_NAME = 'CodexWhaleWidget'
 const APP_LAUNCH_NAME = 'CodexWhaleWidgetOnAppOpen'
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 let settingsPath = null
 let soundsDirPath = ''
+let skinsDirPath = ''
 let trayRef = null
 
 // Electron 在 Windows 上切换 setIgnoreMouseEvents 偶尔会丢掉 TOPMOST 样式。
@@ -95,6 +96,7 @@ function loadSettings() {
         if (typeof parsed.alwaysOnTop === 'boolean') settings.alwaysOnTop = parsed.alwaysOnTop
         if (typeof parsed.soundSet === 'string') settings.soundSet = parsed.soundSet
         if (typeof parsed.showQuotaPanel === 'boolean') settings.showQuotaPanel = parsed.showQuotaPanel
+        if (parsed.skinId === 'default' || parsed.skinId === 'portrait') settings.skinId = parsed.skinId
         return
       }
     } catch (err) { /* 继续试下一个 */ }
@@ -359,6 +361,7 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (typeof patch.alwaysOnTop === 'boolean') { settings.alwaysOnTop = patch.alwaysOnTop; applyTop(true) }
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
+  if (patch.skinId === 'default' || patch.skinId === 'portrait') settings.skinId = patch.skinId
   if (typeof patch.autoStart === 'boolean') {
     if (patch.autoStart) setLaunchWithApps(false)
     setAutoStart(patch.autoStart)
@@ -375,6 +378,11 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
 ipcMain.handle('whale:open-sounds', () => {
   if (soundsDirPath) shell.openPath(soundsDirPath)
   return !!soundsDirPath
+})
+
+ipcMain.handle('whale:open-skins', () => {
+  if (skinsDirPath) shell.openPath(skinsDirPath)
+  return !!skinsDirPath
 })
 
 ipcMain.handle('whale:completion:activate', async (_event, id) => {
@@ -459,6 +467,7 @@ app.whenReady().then(async () => {
 
   settingsPath = path.join(started.dirs.dataDir, '.whale-settings.json')
   soundsDirPath = started.dirs.soundsDir || ''
+  skinsDirPath = started.dirs.skinsDir || ''
   loadSettings()
 
   createWindow()

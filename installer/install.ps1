@@ -29,6 +29,19 @@ Get-ChildItem -LiteralPath $package -Force | Copy-Item -Destination $installRoot
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'uninstall.ps1') -Destination (Join-Path $installRoot 'uninstall.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'watch.ps1') -Destination $watcherScript -Force
 
+# 本地私有安装包可附带 skins/portrait.png；只在首次安装时播种，不覆盖用户自己的皮肤。
+$bundledSkins = Join-Path $PSScriptRoot 'skins'
+if (Test-Path -LiteralPath $bundledSkins -PathType Container) {
+  $userSkins = Join-Path $installRoot 'data\skins'
+  New-Item -ItemType Directory -Force -Path $userSkins | Out-Null
+  Get-ChildItem -LiteralPath $bundledSkins -Filter '*.png' -File | ForEach-Object {
+    $targetSkin = Join-Path $userSkins $_.Name
+    if (-not (Test-Path -LiteralPath $targetSkin -PathType Leaf)) {
+      Copy-Item -LiteralPath $_.FullName -Destination $targetSkin -Force
+    }
+  }
+}
+
 # 如果用户曾从便携目录运行，可迁移个人配置；已有的安装配置始终优先。
 if ($MigrateFrom -and (Test-Path -LiteralPath $MigrateFrom -PathType Container)) {
   foreach ($name in @('config.json', 'data', 'sounds')) {
@@ -52,7 +65,7 @@ $uninstallScript = Join-Path $installRoot 'uninstall.ps1'
 $psExe = (Get-Command powershell.exe).Source
 $fields = @{
   DisplayName = 'Codex 额度小鲸鱼'
-  DisplayVersion = '0.7.3'
+  DisplayVersion = '0.7.4-local.1'
   InstallLocation = $installRoot
   DisplayIcon = $installedExe
   UninstallString = ('"' + $psExe + '" -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"')

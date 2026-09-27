@@ -33,5 +33,6 @@ contextBridge.exposeInMainWorld('__whale', {
     if (typeof callback === 'function') ipcRenderer.on('whale:settings-updated', (_event, settings) => callback(settings))
   },
   openSounds: () => ipcRenderer.invoke('whale:open-sounds'),
+  openSkins: () => ipcRenderer.invoke('whale:open-skins'),
   activateCompletion: (id) => ipcRenderer.invoke('whale:completion:activate', id),
 })
