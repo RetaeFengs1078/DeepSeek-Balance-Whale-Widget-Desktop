@@ -42,6 +42,9 @@ export function normalizeWindow(raw) {
 
 export function normalizeRateLimits(rateLimits) {
   if (!rateLimits || typeof rateLimits !== 'object') return null
+  // 同一批 Codex 会话也可能写入其他额度（例如 gpt-reserve）。
+  // 旧版日志没有 limit_id，继续按窗口解析；新版只接受 Codex 本身的额度。
+  if (rateLimits.limit_id != null && rateLimits.limit_id !== 'codex') return null
   const windows = {}
   for (const raw of [rateLimits.primary, rateLimits.secondary]) {
     const item = normalizeWindow(raw)
