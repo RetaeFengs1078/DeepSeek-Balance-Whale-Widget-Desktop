@@ -590,6 +590,8 @@ function restoreBubbleLines() {
   lastHintText = null
   textBox.style.transition = ''
   textBox.style.opacity = ''
+  amountEl.style.fontSize = ''
+  hintEl.style.fontSize = ''
   gifEl.style.display = 'none'
   gifEl.style.opacity = ''
   labelEl.style.display = ''
@@ -603,6 +605,32 @@ function restoreBubbleLines() {
   hintEl.className = 'dshwv-hint'
   hintEl.style.color = ''
   render()
+}
+function fitLiteratureText() {
+  if (!bubbleBox.classList.contains('dshwv-literature-open')) return
+  var width = bubbleBox.clientWidth
+  var height = bubbleBox.clientHeight
+  if (!width || !height) return
+  var availableWidth = textBox.clientWidth
+  var availableHeight = height * 0.49
+  var citationSize = Math.min(18, width * 0.043)
+  var quoteSize = Math.min(28, width * 0.063)
+  hintEl.style.fontSize = citationSize + 'px'
+  amountEl.style.fontSize = quoteSize + 'px'
+  // Keep the attribution on one line; only reduce the quote when its wrapped
+  // lines would reach outside the main oval of the speech bubble.
+  for (var i = 0; i < 30 && hintEl.scrollWidth > availableWidth + 1; i++) {
+    citationSize *= 0.92
+    hintEl.style.fontSize = citationSize + 'px'
+  }
+  for (var j = 0; j < 30 &&
+      (textBox.scrollHeight > availableHeight || amountEl.scrollWidth > availableWidth + 1); j++) {
+    quoteSize *= 0.92
+    amountEl.style.fontSize = quoteSize + 'px'
+  }
+}
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(fitLiteratureText).observe(bubbleBox)
 }
 function showBubble() {
   if (!bubbleOn) return
@@ -709,6 +737,7 @@ function showInfoBubble(info) {
   bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
   bubbleBox.classList.add(info.kind === 'almanac' ? 'dshwv-almanac-open' :
     info.kind === 'literature' ? 'dshwv-literature-open' : 'dshwv-usage-open', 'dshwv-bubble-open')
+  if (info.kind === 'literature') fitLiteratureText()
   positionBubble()
   if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   bubbleTimer = setTimeout(hideBubble, info.duration || 8500)
@@ -722,8 +751,8 @@ window.whaleShowAlmanac = function (almanac) {
 window.whaleTryShowLiterature = function (quote) {
   if (!quote || !quote.text || bubbleShown || costBubbleActive ||
       menuOpen || (drag && drag.active) || document.visibilityState === 'hidden') return false
-  showInfoBubble({ label: '文学一刻 · ' + quote.author, amount: quote.text,
-    hint: '《' + quote.work + '》', kind: 'literature',
+  showInfoBubble({ label: '', amount: quote.text,
+    hint: '——' + quote.author + '《' + quote.work + '》', kind: 'literature',
     duration: Math.max(10000, Math.min(16000, quote.text.length * 280)) })
   return true
 }
