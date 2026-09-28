@@ -19,6 +19,6 @@ test('名句库每条都是一整句，并附作者与作品', async () => {
     assert.doesNotMatch(quote.text.slice(0, -1), /[。！？；.!?;]/, quote.text)
     assert.ok(quote.text.length <= 70, quote.text)
   }
-  assert.ok(quotes.some(item => item.author === '鲁迅'))
-  assert.ok(quotes.some(item => item.author === '莎士比亚'))
+  assert.ok(new Set(quotes.map(item => item.author)).size >= 15)
+  assert.doesNotMatch(quotes.map(item => item.text).join('\n'), /轻拢慢捻|天生我材|落霞与孤鹜|但愿人长久|枯藤老树/)
 })

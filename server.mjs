@@ -162,9 +162,9 @@ export async function startServer(opts = {}) {
         '想让按下和松手用不同声音，就把两个文件命名成同一前缀：\n' +
         '  mysound_press.mp3   和   mysound_release.mp3\n' +
         '（也认 -press/-release、down/up、按下/松手）\n' +
-        '只有一个文件时，按下和松手都用它。\n\n' +
+        '只有一个文件时，每次点击只在按下时播放一次。\n\n' +
         '一个音效包想放多段：新建一个子文件夹，把 01.mp3、02.mp3 等放进去。\n' +
-        '菜单可选顺序循环或随机播放；每次点击选一段，按下和松手使用同一段。\n',
+        '菜单可选顺序循环或随机播放；每次点击选一段。\n',
         'utf8')
     }
   } catch (err) { /* 只读环境就算了 */ }
@@ -195,6 +195,13 @@ export async function startServer(opts = {}) {
     if (!pack) return false
     const event = params.get('event') || ''
     const track = pickSound(pack, /^[a-z0-9-]{1,64}$/i.test(event) ? event : '', params.get('mode'))
+    // A standalone clip is a complete click sound. Paired press/release files
+    // still play both parts, but replaying one clip on release sounds doubled.
+    if (which === 'release' && track.any && !track.release) {
+      res.writeHead(204, { 'Cache-Control': 'no-store' })
+      res.end()
+      return true
+    }
     const file = which === 'press' ? (track.press || track.any) : (track.release || track.any)
     if (!file) return false
     let bytes

@@ -40,7 +40,7 @@ test('每次点击循环或随机选一段，按下和松手共用同一次选�
   assert.equal(random(pack, 'click-1', 'random').id, '03')
 })
 
-test('音效接口逐次循环，按下和松手读取同一段', async () => {
+test('音效接口逐次循环，单段音效每次点击只播放一次', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'whale-sound-http-'))
   const soundsDir = path.join(dir, 'sounds')
   const packDir = path.join(soundsDir, 'oi')
@@ -56,13 +56,13 @@ test('音效接口逐次循环，按下和松手读取同一段', async () => {
     const base = 'http://127.0.0.1:' + server.port
     const packs = await (await fetch(base + '/dsh-whale/sounds')).json()
     assert.equal(packs.items.find(pack => pack.id === 'dir:oi').tracks.length, 2)
-    const get = async (which, event) => (await fetch(base + '/dsh-whale/sound/' + which + '.mp3?' +
-      new URLSearchParams({ set: 'c:dir:oi', event, mode: 'cycle' }))).text()
-    assert.equal(await get('release', 'one'), 'first-release')
-    assert.equal(await get('press', 'one'), 'first-press')
-    assert.equal(await get('press', 'two'), 'second')
-    assert.equal(await get('release', 'two'), 'second')
-    assert.equal(await get('press', 'three'), 'first-press')
+    const get = async (which, event) => fetch(base + '/dsh-whale/sound/' + which + '.mp3?' +
+      new URLSearchParams({ set: 'c:dir:oi', event, mode: 'cycle' }))
+    assert.equal(await (await get('release', 'one')).text(), 'first-release')
+    assert.equal(await (await get('press', 'one')).text(), 'first-press')
+    assert.equal(await (await get('press', 'two')).text(), 'second')
+    assert.equal((await get('release', 'two')).status, 204)
+    assert.equal(await (await get('press', 'three')).text(), 'first-press')
   } finally {
     server?.shutdown()
     fs.rmSync(dir, { recursive: true, force: true })
