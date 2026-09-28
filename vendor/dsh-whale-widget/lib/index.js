@@ -613,6 +613,16 @@ function fitLiteratureText() {
   if (!width || !height) return
   var availableWidth = textBox.clientWidth
   var availableHeight = height * 0.49
+  if (bubbleBox.classList.contains('dshwv-whale-call-open')) {
+    var callSize = Math.min(72, width * 0.17)
+    amountEl.style.fontSize = callSize + 'px'
+    for (var k = 0; k < 30 &&
+        (amountEl.scrollWidth > availableWidth + 1 || textBox.scrollHeight > availableHeight); k++) {
+      callSize *= 0.92
+      amountEl.style.fontSize = callSize + 'px'
+    }
+    return
+  }
   var citationSize = Math.min(18, width * 0.043)
   var quoteSize = Math.min(28, width * 0.063)
   hintEl.style.fontSize = citationSize + 'px'
@@ -641,7 +651,7 @@ function showBubble() {
   bubbleShown = true
   bubbleRandomActive = false
   completionActive = false
-  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
+  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open', 'dshwv-whale-call-open')
   bubbleBox.title = ''
   restoreBubbleLines()
   bubbleBox.classList.add('dshwv-bubble-open')
@@ -666,7 +676,7 @@ function hideBubble() {
   // 只销毁 gif 显示；三行文字保持现状让气泡自然淡出——不能在关闭瞬间
   // 恢复成余额内容（否则随机台词界面会闪现余额）。文字恢复交给下次
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
-  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
+  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open', 'dshwv-whale-call-open')
   bubbleBox.title = ''
   if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   if (window.whaleOnBubbleHidden) window.whaleOnBubbleHidden()
@@ -693,7 +703,7 @@ function showCompletionBubble(event) {
   labelEl.textContent = String(event.source || 'Codex') + ' · 已完成'
   amountEl.textContent = String(event.conversation || '任务已完成')
   hintEl.style.display = 'none'
-  bubbleBox.classList.remove('dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
+  bubbleBox.classList.remove('dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open', 'dshwv-whale-call-open')
   bubbleBox.classList.add('dshwv-completion-open', 'dshwv-bubble-open')
   positionBubble()
   if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
@@ -734,9 +744,10 @@ function showInfoBubble(info) {
   }
   hintEl.style.display = info.hint ? '' : 'none'
   bubbleBox.title = String(info.title || '')
-  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
+  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open', 'dshwv-whale-call-open')
   bubbleBox.classList.add(info.kind === 'almanac' ? 'dshwv-almanac-open' :
     info.kind === 'literature' ? 'dshwv-literature-open' : 'dshwv-usage-open', 'dshwv-bubble-open')
+  bubbleBox.classList.toggle('dshwv-whale-call-open', !!info.whaleCall)
   if (info.kind === 'literature') fitLiteratureText()
   positionBubble()
   if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
@@ -752,7 +763,8 @@ window.whaleTryShowLiterature = function (quote) {
   if (!quote || !quote.text || bubbleShown || costBubbleActive ||
       menuOpen || (drag && drag.active) || document.visibilityState === 'hidden') return false
   showInfoBubble({ label: '', amount: quote.text,
-    hint: '——' + quote.author + '《' + quote.work + '》', kind: 'literature',
+    hint: quote.whaleCall ? '' : '——' + quote.author + '《' + quote.work + '》', kind: 'literature',
+    whaleCall: !!quote.whaleCall,
     duration: Math.max(10000, Math.min(16000, quote.text.length * 280)) })
   return true
 }

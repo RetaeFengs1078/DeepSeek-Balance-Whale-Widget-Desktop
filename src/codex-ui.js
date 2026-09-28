@@ -15,6 +15,7 @@
   var skinSelect = null
   var selectedSkinId = 'default'
   var literatureEnabled = false
+  var showProUsageBubble = true
   var literatureIntervalMinutes = 30
   var literatureReady = false
   var literatureTimer = null
@@ -35,11 +36,15 @@
       scheduleLiterature(15000)
       return
     }
-    var index = lastQuoteIndex < 0 ? Math.floor(Math.random() * quotes.length)
-      : Math.floor(Math.random() * (quotes.length - (quotes.length > 1 ? 1 : 0)))
-    if (lastQuoteIndex >= 0 && quotes.length > 1 && index >= lastQuoteIndex) index++
-    if (window.whaleTryShowLiterature(quotes[index])) {
-      lastQuoteIndex = index
+    var whaleCall = Math.random() < 0.1
+    var index = -1
+    if (!whaleCall) {
+      index = lastQuoteIndex < 0 ? Math.floor(Math.random() * quotes.length)
+        : Math.floor(Math.random() * (quotes.length - (quotes.length > 1 ? 1 : 0)))
+      if (lastQuoteIndex >= 0 && quotes.length > 1 && index >= lastQuoteIndex) index++
+    }
+    if (window.whaleTryShowLiterature(whaleCall ? { text: '哦鲸鲸', whaleCall: true } : quotes[index])) {
+      if (!whaleCall) lastQuoteIndex = index
       scheduleLiterature(nextLiteratureDelay())
     } else scheduleLiterature(15000)
   }
@@ -48,6 +53,12 @@
     panel.hidden = !show
     if (panelToggle) panelToggle.checked = show
     if (startupToggle) startupToggle.checked = !!(settings && settings.autoStart)
+    var nextShowProUsageBubble = !settings || settings.showProUsageBubble !== false
+    if (showProUsageBubble !== nextShowProUsageBubble && !nextShowProUsageBubble && bubblePage === 1) {
+      bubblePage = 2
+      showAlmanacPage()
+    }
+    showProUsageBubble = nextShowProUsageBubble
     var nextLiteratureEnabled = !!(settings && settings.literatureEnabled)
     var nextLiteratureInterval = Number(settings && settings.literatureIntervalMinutes) || 30
     var literatureChanged = nextLiteratureEnabled !== literatureEnabled || nextLiteratureInterval !== literatureIntervalMinutes
@@ -247,7 +258,12 @@
   }
   function advanceBubble(fromBubble) {
     if (bubblePage < 0) return false
-    if (bubblePage === 0) { bubblePage = 1; showUsagePage(); return true }
+    if (bubblePage === 0) {
+      bubblePage = showProUsageBubble ? 1 : 2
+      if (showProUsageBubble) showUsagePage()
+      else showAlmanacPage()
+      return true
+    }
     if (bubblePage === 1) { bubblePage = 2; showAlmanacPage(); return true }
     bubblePage = 0
     if (fromBubble && window.whaleShowQuota) { window.whaleShowQuota(); return true }

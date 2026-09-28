@@ -71,7 +71,7 @@ function applyWindowShape(regions) {
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
 const LITERATURE_INTERVALS = new Set([5, 15, 30, 60, 120])
 const settings = { alwaysOnTop: true, soundSet: '', soundMode: 'cycle', showQuotaPanel: false, skinId: 'default',
-  literatureEnabled: false, literatureIntervalMinutes: 30,
+  literatureEnabled: false, literatureIntervalMinutes: 30, showProUsageBubble: true,
   emailEnabled: false, emailIncludeTitle: true, emailHost: '', emailPort: 465,
   emailSecurity: 'tls', emailUser: '', emailRecipient: '', emailSecret: '' }
 const LOGIN_ITEM_NAME = 'CodexWhaleWidget'
@@ -103,6 +103,7 @@ function loadSettings() {
         if (parsed.soundMode === 'cycle' || parsed.soundMode === 'random') settings.soundMode = parsed.soundMode
         if (typeof parsed.showQuotaPanel === 'boolean') settings.showQuotaPanel = parsed.showQuotaPanel
         if (typeof parsed.literatureEnabled === 'boolean') settings.literatureEnabled = parsed.literatureEnabled
+        if (typeof parsed.showProUsageBubble === 'boolean') settings.showProUsageBubble = parsed.showProUsageBubble
         if (LITERATURE_INTERVALS.has(parsed.literatureIntervalMinutes)) settings.literatureIntervalMinutes = parsed.literatureIntervalMinutes
         if (parsed.skinId === 'default' || parsed.skinId === 'portrait') settings.skinId = parsed.skinId
         if (typeof parsed.emailEnabled === 'boolean') settings.emailEnabled = parsed.emailEnabled
@@ -453,6 +454,7 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (patch.soundMode === 'cycle' || patch.soundMode === 'random') settings.soundMode = patch.soundMode
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
   if (typeof patch.literatureEnabled === 'boolean') settings.literatureEnabled = patch.literatureEnabled
+  if (typeof patch.showProUsageBubble === 'boolean') settings.showProUsageBubble = patch.showProUsageBubble
   if (LITERATURE_INTERVALS.has(patch.literatureIntervalMinutes)) settings.literatureIntervalMinutes = patch.literatureIntervalMinutes
   if (patch.skinId === 'default' || patch.skinId === 'portrait') settings.skinId = patch.skinId
   if (typeof patch.emailIncludeTitle === 'boolean') settings.emailIncludeTitle = patch.emailIncludeTitle

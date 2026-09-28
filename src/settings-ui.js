@@ -30,6 +30,7 @@
     byId('auto-start').checked = !!desktop.autoStart
     byId('always-on-top').checked = desktop.alwaysOnTop !== false
     byId('quota-panel').checked = !!desktop.showQuotaPanel
+    byId('pro-usage-bubble').checked = desktop.showProUsageBubble !== false
     byId('literature-enabled').checked = !!desktop.literatureEnabled
     byId('literature-interval').value = String(desktop.literatureIntervalMinutes || 30)
     byId('launch-with-apps').checked = !!desktop.launchWithApps && !desktop.autoStart
@@ -135,6 +136,7 @@
   bindDesktopCheckbox('auto-start', 'autoStart')
   bindDesktopCheckbox('always-on-top', 'alwaysOnTop')
   bindDesktopCheckbox('quota-panel', 'showQuotaPanel')
+  bindDesktopCheckbox('pro-usage-bubble', 'showProUsageBubble')
   bindDesktopCheckbox('literature-enabled', 'literatureEnabled')
   byId('literature-interval').addEventListener('change', function () {
     patchDesktop({ literatureIntervalMinutes: Number(this.value) })
