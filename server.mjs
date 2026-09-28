@@ -14,6 +14,7 @@ import { BrowserCompletionStore, isExtensionOrigin } from './src/browser-complet
 import { BrowserActionBridge } from './src/browser-actions.mjs'
 import { UsageHistory } from './src/usage-history.mjs'
 import { getAlmanac } from './src/almanac.mjs'
+import { scanSoundPacks, createSoundPicker } from './src/sound-packs.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 
@@ -150,7 +151,7 @@ export async function startServer(opts = {}) {
   }
 
   // 自定义音效目录：放在 config.json 旁边，丢音频文件进去就能在菜单里选
-  const soundsDir = path.join(dirs.appDir, 'sounds')
+  const soundsDir = opts.soundsDir || path.join(dirs.appDir, 'sounds')
   try {
     fs.mkdirSync(soundsDir, { recursive: true })
     const hintFile = path.join(soundsDir, '把音频文件放这里.txt')
@@ -161,15 +162,16 @@ export async function startServer(opts = {}) {
         '想让按下和松手用不同声音，就把两个文件命名成同一前缀：\n' +
         '  mysound_press.mp3   和   mysound_release.mp3\n' +
         '（也认 -press/-release、down/up、按下/松手）\n' +
-        '只有一个文件时，按下和松手都用它。\n',
+        '只有一个文件时，按下和松手都用它。\n\n' +
+        '一个音效包想放多段：新建一个子文件夹，把 01.mp3、02.mp3 等放进去。\n' +
+        '菜单可选顺序循环或随机播放；每次点击选一段，按下和松手使用同一段。\n',
         'utf8')
     }
   } catch (err) { /* 只读环境就算了 */ }
 
-  // 扫描结果缓存：id -> { press, release, any }
+  // 扫描结果缓存：id -> { tracks: [{ press, release, any }] }
   let soundIndex = new Map()
-
-  const SOUND_EXT = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.opus', '.webm']
+  const pickSound = createSoundPicker()
   const SOUND_MIME = {
     '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
     '.m4a': 'audio/mp4', '.flac': 'audio/flac', '.aac': 'audio/aac',
@@ -177,48 +179,23 @@ export async function startServer(opts = {}) {
   }
 
   function scanSounds() {
-    const groups = new Map()
-    try {
-      for (const name of fs.readdirSync(soundsDir)) {
-        const ext = path.extname(name).toLowerCase()
-        if (!SOUND_EXT.includes(ext)) continue
-        const stem = path.basename(name, ext)
-        let key = stem
-        let kind = 'any'
-        const m = /(?:[_\-\s])?(press|release|down|up|按下|松手|按|松)$/i.exec(stem)
-        if (m) {
-          key = stem.slice(0, m.index).replace(/[_\-\s]+$/, '')
-          const t = m[1].toLowerCase()
-          kind = (t === 'press' || t === 'down' || t === '按下' || t === '按') ? 'press' : 'release'
-        }
-        if (!key) key = stem
-        if (!groups.has(key)) groups.set(key, { id: key, name: key, press: null, release: null, any: null })
-        groups.get(key)[kind] = groups.get(key)[kind] || name
-      }
-    } catch (err) { /* 目录不存在就返回空 */ }
-    soundIndex = groups
-    return [...groups.values()]
-      .filter((g) => g.press || g.release || g.any)
-      .sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh'))
+    const packs = scanSoundPacks(soundsDir)
+    soundIndex = new Map(packs.map(pack => [pack.id, pack]))
+    return packs
   }
   dirs.soundsDir = soundsDir
   scanSounds()
 
-  function querySet(url) {
-    try {
-      const q = String(url || '').split('?')[1] || ''
-      const m = /(?:^|&)set=([^&]+)/.exec(q)
-      return m ? decodeURIComponent(m[1]) : ''
-    } catch (err) { return '' }
-  }
-
   // 返回 true 表示已由自定义音效处理，false 则交给插件的内置音效
   function serveCustomSound(req, res, which) {
-    const set = querySet(req.url)
+    const params = new URL(req.url, 'http://localhost').searchParams
+    const set = params.get('set') || ''
     if (!set.startsWith('c:')) return false
-    const g = soundIndex.get(set.slice(2))
-    if (!g) return false
-    const file = which === 'press' ? (g.press || g.any) : (g.release || g.any)
+    const pack = soundIndex.get(set.slice(2))
+    if (!pack) return false
+    const event = params.get('event') || ''
+    const track = pickSound(pack, /^[a-z0-9-]{1,64}$/i.test(event) ? event : '', params.get('mode'))
+    const file = which === 'press' ? (track.press || track.any) : (track.release || track.any)
     if (!file) return false
     let bytes
     try { bytes = fs.readFileSync(path.join(soundsDir, file)) } catch (err) { return false }

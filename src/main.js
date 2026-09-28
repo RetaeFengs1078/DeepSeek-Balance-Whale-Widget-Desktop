@@ -70,7 +70,7 @@ function applyWindowShape(regions) {
 //   alwaysOnTop —— 窗口置顶
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
 const LITERATURE_INTERVALS = new Set([5, 15, 30, 60, 120])
-const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false, skinId: 'default',
+const settings = { alwaysOnTop: true, soundSet: '', soundMode: 'cycle', showQuotaPanel: false, skinId: 'default',
   literatureEnabled: false, literatureIntervalMinutes: 30,
   emailEnabled: false, emailIncludeTitle: true, emailHost: '', emailPort: 465,
   emailSecurity: 'tls', emailUser: '', emailRecipient: '', emailSecret: '' }
@@ -100,6 +100,7 @@ function loadSettings() {
       if (parsed && typeof parsed === 'object') {
         if (typeof parsed.alwaysOnTop === 'boolean') settings.alwaysOnTop = parsed.alwaysOnTop
         if (typeof parsed.soundSet === 'string') settings.soundSet = parsed.soundSet
+        if (parsed.soundMode === 'cycle' || parsed.soundMode === 'random') settings.soundMode = parsed.soundMode
         if (typeof parsed.showQuotaPanel === 'boolean') settings.showQuotaPanel = parsed.showQuotaPanel
         if (typeof parsed.literatureEnabled === 'boolean') settings.literatureEnabled = parsed.literatureEnabled
         if (LITERATURE_INTERVALS.has(parsed.literatureIntervalMinutes)) settings.literatureIntervalMinutes = parsed.literatureIntervalMinutes
@@ -449,6 +450,7 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (!patch || typeof patch !== 'object') return currentSettings()
   if (typeof patch.alwaysOnTop === 'boolean') { settings.alwaysOnTop = patch.alwaysOnTop; applyTop(true) }
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
+  if (patch.soundMode === 'cycle' || patch.soundMode === 'random') settings.soundMode = patch.soundMode
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
   if (typeof patch.literatureEnabled === 'boolean') settings.literatureEnabled = patch.literatureEnabled
   if (LITERATURE_INTERVALS.has(patch.literatureIntervalMinutes)) settings.literatureIntervalMinutes = patch.literatureIntervalMinutes

@@ -1198,6 +1198,7 @@ var pressing = false
 var pressEnded = false
 var releasePlayed = false
 var releaseTimer = null
+var customSoundEvent = 0
 function playDuckCompletion() {
   if (!soundOn || soundVol <= 0) return
   try {
@@ -1217,15 +1218,21 @@ function playDuckCompletion() {
 }
 function applySoundSet() {
   try {
-    pressAudio = new Audio('/dsh-whale/sound/press.mp3?set=' + soundSet)
-    pressAudio.preload = 'auto'
+    var event = window.__whaleCustomSound ? '&event=' + (++customSoundEvent).toString(36) : ''
+    pressAudio = new Audio('/dsh-whale/sound/press.mp3?set=' + soundSet + event)
+    pressAudio.preload = window.__whaleCustomSound ? 'none' : 'auto'
     pressAudio.volume = soundVol
-    releaseAudio = new Audio('/dsh-whale/sound/release.mp3?set=' + soundSet)
-    releaseAudio.preload = 'auto'
+    releaseAudio = new Audio('/dsh-whale/sound/release.mp3?set=' + soundSet + event)
+    releaseAudio.preload = window.__whaleCustomSound ? 'none' : 'auto'
     releaseAudio.volume = soundVol
   } catch (err) {}
 }
 function playPress() {
+  if (window.__whaleCustomSound && soundOn) {
+    if (pressAudio) pressAudio.pause()
+    if (releaseAudio) releaseAudio.pause()
+    applySoundSet()
+  }
   if (!pressAudio || !soundOn) return
   try {
     if (releaseTimer) { clearTimeout(releaseTimer); releaseTimer = null }

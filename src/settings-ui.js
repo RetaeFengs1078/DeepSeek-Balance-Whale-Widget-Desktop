@@ -11,6 +11,7 @@
   var desktop = {}
   var widget = {}
   var skinItems = []
+  var soundItems = []
   var patchSequence = 0
   function setStatus(id, text) { byId(id).textContent = text }
   function displayTime(value) {
@@ -34,6 +35,8 @@
     byId('launch-with-apps').checked = !!desktop.launchWithApps && !desktop.autoStart
     byId('launch-with-apps').disabled = !!desktop.autoStart
     byId('sound-custom').value = desktop.soundSet || ''
+    byId('sound-mode').value = desktop.soundMode || 'cycle'
+    updateSoundModeEnabled()
     byId('skin-select').value = desktop.skinId || 'default'
     byId('email-enabled').checked = !!desktop.emailEnabled
     byId('email-title-enabled').checked = desktop.emailIncludeTitle !== false
@@ -181,26 +184,36 @@
     }).catch(function () { setStatus('email-status', '发送失败，请检查网络') })
       .finally(function () { button.disabled = false })
   })
-  byId('sound-custom').addEventListener('change', function () { patchDesktop({ soundSet: this.value }) })
+  byId('sound-custom').addEventListener('change', function () {
+    updateSoundModeEnabled()
+    patchDesktop({ soundSet: this.value })
+  })
+  byId('sound-mode').addEventListener('change', function () { patchDesktop({ soundMode: this.value }) })
   byId('skin-select').addEventListener('change', function () { patchDesktop({ skinId: this.value }) })
   byId('open-sounds').addEventListener('click', function () { bridge.openSounds() })
   byId('open-skins').addEventListener('click', function () { bridge.openSkins() })
 
+  function updateSoundModeEnabled() {
+    var selected = soundItems.find(function (item) { return item.id === byId('sound-custom').value })
+    byId('sound-mode').disabled = !selected || !selected.tracks || selected.tracks.length < 2
+  }
   function refreshSounds() {
     return fetch('/dsh-whale/sounds', { cache: 'no-store' }).then(function (r) { return r.json() }).then(function (data) {
+      soundItems = data.items || []
       var select = byId('sound-custom')
       select.textContent = ''
       var empty = document.createElement('option')
       empty.value = ''
       empty.textContent = '使用内置音效'
       select.appendChild(empty)
-      ;(data.items || []).forEach(function (item) {
+      soundItems.forEach(function (item) {
         var option = document.createElement('option')
         option.value = item.id
-        option.textContent = item.name
+        option.textContent = item.name + (item.tracks.length > 1 ? '（' + item.tracks.length + ' 段）' : '')
         select.appendChild(option)
       })
       select.value = desktop.soundSet || ''
+      updateSoundModeEnabled()
     }).catch(function () { setStatus('refresh-status', '音效包读取失败') })
   }
   function refreshSkins() {

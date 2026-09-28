@@ -106,12 +106,14 @@
     // 必须在挂件脚本（defer）之前执行。
     if (DESKTOP) {
       window.__whaleCustomSound = ''
+      window.__whaleSoundMode = 'cycle'
       var _Audio = window.Audio
       window.__whaleBuiltinAudio = _Audio
       window.Audio = function (src) {
         try {
           if (window.__whaleCustomSound && typeof src === 'string' && src.indexOf('/dsh-whale/sound/') !== -1) {
             src = src.replace(/([?&]set=)[^&]*/, '$1' + encodeURIComponent('c:' + window.__whaleCustomSound))
+            src += '&mode=' + encodeURIComponent(window.__whaleSoundMode || 'cycle')
           }
         } catch (err) {}
         return new _Audio(src)
