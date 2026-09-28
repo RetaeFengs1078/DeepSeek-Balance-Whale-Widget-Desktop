@@ -69,7 +69,9 @@ function applyWindowShape(regions) {
 // 桌面端自己的设置（跟插件的尺寸配置分开存，互不覆盖）
 //   alwaysOnTop —— 窗口置顶
 //   soundSet    —— '' 表示用插件内置音效，否则是自定义音效包 id
+const LITERATURE_INTERVALS = new Set([5, 15, 30, 60, 120])
 const settings = { alwaysOnTop: true, soundSet: '', showQuotaPanel: false, skinId: 'default',
+  literatureEnabled: false, literatureIntervalMinutes: 30,
   emailEnabled: false, emailIncludeTitle: true, emailHost: '', emailPort: 465,
   emailSecurity: 'tls', emailUser: '', emailRecipient: '', emailSecret: '' }
 const LOGIN_ITEM_NAME = 'CodexWhaleWidget'
@@ -99,6 +101,8 @@ function loadSettings() {
         if (typeof parsed.alwaysOnTop === 'boolean') settings.alwaysOnTop = parsed.alwaysOnTop
         if (typeof parsed.soundSet === 'string') settings.soundSet = parsed.soundSet
         if (typeof parsed.showQuotaPanel === 'boolean') settings.showQuotaPanel = parsed.showQuotaPanel
+        if (typeof parsed.literatureEnabled === 'boolean') settings.literatureEnabled = parsed.literatureEnabled
+        if (LITERATURE_INTERVALS.has(parsed.literatureIntervalMinutes)) settings.literatureIntervalMinutes = parsed.literatureIntervalMinutes
         if (parsed.skinId === 'default' || parsed.skinId === 'portrait') settings.skinId = parsed.skinId
         if (typeof parsed.emailEnabled === 'boolean') settings.emailEnabled = parsed.emailEnabled
         if (typeof parsed.emailIncludeTitle === 'boolean') settings.emailIncludeTitle = parsed.emailIncludeTitle
@@ -446,6 +450,8 @@ ipcMain.handle('whale:settings:patch', (_event, patch) => {
   if (typeof patch.alwaysOnTop === 'boolean') { settings.alwaysOnTop = patch.alwaysOnTop; applyTop(true) }
   if (typeof patch.soundSet === 'string') settings.soundSet = patch.soundSet
   if (typeof patch.showQuotaPanel === 'boolean') settings.showQuotaPanel = patch.showQuotaPanel
+  if (typeof patch.literatureEnabled === 'boolean') settings.literatureEnabled = patch.literatureEnabled
+  if (LITERATURE_INTERVALS.has(patch.literatureIntervalMinutes)) settings.literatureIntervalMinutes = patch.literatureIntervalMinutes
   if (patch.skinId === 'default' || patch.skinId === 'portrait') settings.skinId = patch.skinId
   if (typeof patch.emailIncludeTitle === 'boolean') settings.emailIncludeTitle = patch.emailIncludeTitle
   if (typeof patch.emailHost === 'string') settings.emailHost = patch.emailHost.trim().slice(0, 253)

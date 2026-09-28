@@ -29,6 +29,8 @@
     byId('auto-start').checked = !!desktop.autoStart
     byId('always-on-top').checked = desktop.alwaysOnTop !== false
     byId('quota-panel').checked = !!desktop.showQuotaPanel
+    byId('literature-enabled').checked = !!desktop.literatureEnabled
+    byId('literature-interval').value = String(desktop.literatureIntervalMinutes || 30)
     byId('launch-with-apps').checked = !!desktop.launchWithApps && !desktop.autoStart
     byId('launch-with-apps').disabled = !!desktop.autoStart
     byId('sound-custom').value = desktop.soundSet || ''
@@ -130,6 +132,10 @@
   bindDesktopCheckbox('auto-start', 'autoStart')
   bindDesktopCheckbox('always-on-top', 'alwaysOnTop')
   bindDesktopCheckbox('quota-panel', 'showQuotaPanel')
+  bindDesktopCheckbox('literature-enabled', 'literatureEnabled')
+  byId('literature-interval').addEventListener('change', function () {
+    patchDesktop({ literatureIntervalMinutes: Number(this.value) })
+  })
   bindDesktopCheckbox('launch-with-apps', 'launchWithApps')
   bindDesktopCheckbox('email-title-enabled', 'emailIncludeTitle')
   byId('email-enabled').addEventListener('change', function () {

@@ -613,7 +613,7 @@ function showBubble() {
   bubbleShown = true
   bubbleRandomActive = false
   completionActive = false
-  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
+  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
   bubbleBox.title = ''
   restoreBubbleLines()
   bubbleBox.classList.add('dshwv-bubble-open')
@@ -638,7 +638,7 @@ function hideBubble() {
   // 只销毁 gif 显示；三行文字保持现状让气泡自然淡出——不能在关闭瞬间
   // 恢复成余额内容（否则随机台词界面会闪现余额）。文字恢复交给下次
   // showBubble() 的 restoreBubbleLines()（那时气泡隐藏，恢复过程不可见）。
-  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
+  bubbleBox.classList.remove('dshwv-bubble-open', 'dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
   bubbleBox.title = ''
   if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
   if (window.whaleOnBubbleHidden) window.whaleOnBubbleHidden()
@@ -665,7 +665,7 @@ function showCompletionBubble(event) {
   labelEl.textContent = String(event.source || 'Codex') + ' · 已完成'
   amountEl.textContent = String(event.conversation || '任务已完成')
   hintEl.style.display = 'none'
-  bubbleBox.classList.remove('dshwv-usage-open', 'dshwv-almanac-open')
+  bubbleBox.classList.remove('dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
   bubbleBox.classList.add('dshwv-completion-open', 'dshwv-bubble-open')
   positionBubble()
   if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
@@ -675,7 +675,7 @@ function showCompletionBubble(event) {
 window.whaleShowCompletion = showCompletionBubble
 
 function showInfoBubble(info) {
-  if (!bubbleOn || !info) return
+  if (!info || (!bubbleOn && info.kind !== 'literature')) return
   if (costBubbleTimer) { clearTimeout(costBubbleTimer); costBubbleTimer = null }
   costBubbleActive = false
   if (bubbleTimer) { clearTimeout(bubbleTimer); bubbleTimer = null }
@@ -706,17 +706,26 @@ function showInfoBubble(info) {
   }
   hintEl.style.display = info.hint ? '' : 'none'
   bubbleBox.title = String(info.title || '')
-  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open')
-  bubbleBox.classList.add(info.kind === 'almanac' ? 'dshwv-almanac-open' : 'dshwv-usage-open', 'dshwv-bubble-open')
+  bubbleBox.classList.remove('dshwv-completion-open', 'dshwv-usage-open', 'dshwv-almanac-open', 'dshwv-literature-open')
+  bubbleBox.classList.add(info.kind === 'almanac' ? 'dshwv-almanac-open' :
+    info.kind === 'literature' ? 'dshwv-literature-open' : 'dshwv-usage-open', 'dshwv-bubble-open')
   positionBubble()
   if (window.whaleReportState) requestAnimationFrame(window.whaleReportState)
-  bubbleTimer = setTimeout(hideBubble, 8500)
+  bubbleTimer = setTimeout(hideBubble, info.duration || 8500)
 }
 window.whaleShowUsage = function (usage) {
   showInfoBubble({ label: '6 Pro · 重置前已用', amount: usage.counts, hint: usage.resets, kind: 'usage' })
 }
 window.whaleShowAlmanac = function (almanac) {
   showInfoBubble({ label: almanac.label, amount: almanac.yi, hint: almanac.ji, title: almanac.full, kind: 'almanac' })
+}
+window.whaleTryShowLiterature = function (quote) {
+  if (!quote || !quote.text || bubbleShown || costBubbleActive ||
+      menuOpen || (drag && drag.active) || document.visibilityState === 'hidden') return false
+  showInfoBubble({ label: '文学一刻 · ' + quote.author, amount: quote.text,
+    hint: '《' + quote.work + '》', kind: 'literature',
+    duration: Math.max(10000, Math.min(16000, quote.text.length * 280)) })
+  return true
 }
 window.whaleShowQuota = showBubble
 

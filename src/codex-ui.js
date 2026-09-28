@@ -11,13 +11,52 @@
   var panelToggle = null
   var startupToggle = null
   var appLaunchToggle = null
+  var literatureToggle = null
   var skinSelect = null
   var selectedSkinId = 'default'
+  var literatureEnabled = false
+  var literatureIntervalMinutes = 30
+  var literatureReady = false
+  var literatureTimer = null
+  var lastQuoteIndex = -1
+  function scheduleLiterature(delay) {
+    if (literatureTimer) clearTimeout(literatureTimer)
+    literatureTimer = literatureEnabled ? setTimeout(showLiterature, delay) : null
+  }
+  function nextLiteratureDelay() {
+    return Math.round(literatureIntervalMinutes * 60000 * (.8 + Math.random() * .4))
+  }
+  function showLiterature() {
+    literatureTimer = null
+    if (!literatureEnabled) return
+    var quotes = window.whaleLiteratureQuotes || []
+    if (!quotes.length) return
+    if (showingCompletion || completionQueue.length || typeof window.whaleTryShowLiterature !== 'function') {
+      scheduleLiterature(15000)
+      return
+    }
+    var index = lastQuoteIndex < 0 ? Math.floor(Math.random() * quotes.length)
+      : Math.floor(Math.random() * (quotes.length - (quotes.length > 1 ? 1 : 0)))
+    if (lastQuoteIndex >= 0 && quotes.length > 1 && index >= lastQuoteIndex) index++
+    if (window.whaleTryShowLiterature(quotes[index])) {
+      lastQuoteIndex = index
+      scheduleLiterature(nextLiteratureDelay())
+    } else scheduleLiterature(15000)
+  }
   function applySettings(settings) {
     var show = !!(settings && settings.showQuotaPanel)
     panel.hidden = !show
     if (panelToggle) panelToggle.checked = show
     if (startupToggle) startupToggle.checked = !!(settings && settings.autoStart)
+    var nextLiteratureEnabled = !!(settings && settings.literatureEnabled)
+    var nextLiteratureInterval = Number(settings && settings.literatureIntervalMinutes) || 30
+    var literatureChanged = nextLiteratureEnabled !== literatureEnabled || nextLiteratureInterval !== literatureIntervalMinutes
+    var justEnabled = literatureReady && !literatureEnabled && nextLiteratureEnabled
+    literatureEnabled = nextLiteratureEnabled
+    literatureIntervalMinutes = nextLiteratureInterval
+    literatureReady = true
+    if (literatureToggle) literatureToggle.checked = literatureEnabled
+    if (literatureChanged) scheduleLiterature(justEnabled ? 8000 : nextLiteratureDelay())
     if (appLaunchToggle) {
       appLaunchToggle.checked = !!(settings && settings.launchWithApps) && !(settings && settings.autoStart)
       appLaunchToggle.disabled = !!(settings && settings.autoStart)
@@ -357,6 +396,7 @@
       return checkbox
     }
     startupToggle = settingRow('开机自启动', 'autoStart')
+    literatureToggle = settingRow('随机名句', 'literatureEnabled')
     var moreRow = document.createElement('div')
     moreRow.className = 'dshwv-menu-row codex-ext'
     var moreButton = document.createElement('button')

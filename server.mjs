@@ -391,6 +391,11 @@ export async function startServer(opts = {}) {
       catch { send(res, 500, 'Codex 界面脚本读取失败') }
       return
     }
+    if (pathname === '/src/literature-quotes.js') {
+      try { send(res, 200, fs.readFileSync(path.join(dirs.root, 'src', 'literature-quotes.js'), 'utf8'), 'text/javascript; charset=utf-8') }
+      catch { send(res, 500, '名句读取失败') }
+      return
+    }
     if (pathname === '/src/desktop-menu.js') {
       try { send(res, 200, fs.readFileSync(path.join(dirs.root, 'src', 'desktop-menu.js'), 'utf8'), 'text/javascript; charset=utf-8') }
       catch { send(res, 500, '桌面菜单脚本读取失败') }

@@ -70,6 +70,11 @@
   .dshwv-almanac-open .dshwv-yi { color: #218a45; }
   .dshwv-almanac-open .dshwv-ji { color: #c73543; }
   .dshwv-bubble.dshwv-almanac-open .codex-bubble { visibility: hidden; }
+  .dshwv-bubble.dshwv-literature-open .dshwv-text { visibility: visible; width: 80%; white-space: normal; }
+  .dshwv-literature-open .dshwv-label { font-size: max(8px, calc(var(--dshw-u) * 49)); letter-spacing: 0; }
+  .dshwv-literature-open .dshwv-amount { font-size: max(9px, calc(var(--dshw-u) * 63)); line-height: 1.2; overflow-wrap: anywhere; }
+  .dshwv-literature-open .dshwv-hint { font-size: max(7px, calc(var(--dshw-u) * 43)); margin-top: calc(var(--dshw-u) * 8); }
+  .dshwv-bubble.dshwv-literature-open .codex-bubble { visibility: hidden; }
   .codex-bubble { position: absolute; left: 44%; top: 38%;
     transform: translate(-50%,-50%); color: #536ba9; white-space: pre-line; text-align: center; line-height: 1.2;
     font-weight: 700; font-size: max(9px, calc(var(--dshw-u) * 68)); pointer-events: none;
@@ -131,6 +136,7 @@
       }
     }
   </script>
+  <script src="/src/literature-quotes.js" defer></script>
   <script src="/src/codex-ui.js" defer></script>
   <script>
     // 桌面模式：把鲸鱼的位置告诉主进程，由主进程判断光标是否命中（透明区鼠标穿透）。
