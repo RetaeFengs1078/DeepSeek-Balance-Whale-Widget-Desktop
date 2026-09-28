@@ -11,7 +11,7 @@ test('名句库每条都是一整句，并附作者与作品', async () => {
   const context = { window: {} }
   vm.runInNewContext(source, context)
   const quotes = context.window.whaleLiteratureQuotes
-  assert.ok(quotes.length >= 15)
+  assert.ok(quotes.length >= 1000)
   assert.equal(new Set(quotes.map(item => item.text)).size, quotes.length)
   for (const quote of quotes) {
     assert.ok(quote.author && quote.work, quote.text)
@@ -19,6 +19,8 @@ test('名句库每条都是一整句，并附作者与作品', async () => {
     assert.doesNotMatch(quote.text.slice(0, -1), /[。！？；.!?;]/, quote.text)
     assert.ok(quote.text.length <= 70, quote.text)
   }
-  assert.ok(new Set(quotes.map(item => item.author)).size >= 15)
+  assert.ok(new Set(quotes.map(item => item.author)).size >= 60)
+  assert.ok(quotes.filter(item => item.author === '柳永').length >= 60)
+  assert.ok(quotes.filter(item => item.source && item.source.startsWith('宋词/')).length >= 1000)
   assert.doesNotMatch(quotes.map(item => item.text).join('\n'), /轻拢慢捻|天生我材|落霞与孤鹜|但愿人长久|枯藤老树/)
 })

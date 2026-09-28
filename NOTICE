@@ -87,6 +87,13 @@ vendor/dsh-whale-widget/assets/DSniang1.png 缩放制成；图标仍属于同一
 协议：MIT License，完整文本见 vendor/lunar-javascript/LICENSE。
 此库随 Windows 程序分发，在本机计算每日宜忌，不向黄历网站发送数据。
 
+文学气泡中的宋词原文：chinese-poetry/chinese-poetry 数据集
+整理者：JackeyGao 及项目贡献者；项目：https://github.com/chinese-poetry/chinese-poetry
+固定版本：b8594f81a89752241442f2ce267d6f66f96704ee
+协议：MIT License，完整文本见 vendor/chinese-poetry-LICENSE。
+本项目从其宋词 JSON 分片中离线筛出较少见的完整句子，保留作者、词牌与分片出处；
+筛选脚本为 scripts/build-literature-quotes.py，Windows 运行时不连接该数据集。
+
 运行时与打包依赖（均不随本仓库分发，通过 npm 安装）：
 
     electron            MIT License    Copyright (c) Electron contributors
